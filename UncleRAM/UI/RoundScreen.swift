@@ -33,6 +33,10 @@ struct RoundScreen: View {
         }
         .preferredColorScheme(.light)
         .onAppear {
+            if let scene = ScreenshotDemo.scene {
+                engine.showDemo(scene)
+                return
+            }
             monitor.start()
             bench.startFromLaunchArgumentsIfNeeded()
         }

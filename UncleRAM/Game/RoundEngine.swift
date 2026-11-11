@@ -72,6 +72,8 @@ final class RoundEngine {
     @ObservationIgnored private var worker: DonationWorker?
     @ObservationIgnored private var stoppedAtSafetyLine = false
     @ObservationIgnored private var bluffTask: Task<Void, Never>?
+    /// 撮影モードで見せる献上量（メモリは確保しない）
+    @ObservationIgnored private var demoDonatedBytes: UInt64?
 
     init(
         client: Client = .allocateCorp,
@@ -90,7 +92,7 @@ final class RoundEngine {
 
     /// 確保して書き込み済みの量。毎フレーム読まれるので、観測の対象にしない
     var donatedBytes: UInt64 {
-        allocator.allocatedBytes
+        demoDonatedBytes ?? allocator.allocatedBytes
     }
 
     /// 献上量（枠に対する割合）
@@ -208,6 +210,43 @@ final class RoundEngine {
             case .donating, .settling:
                 try? await Task.sleep(for: .milliseconds(10))
             }
+        }
+    }
+
+    /// 撮影モード（ScreenshotDemo）の場面を、メモリを確保せずに見せる
+    func showDemo(_ scene: ScreenshotDemo.Scene) {
+        let plan = RoundPlan(isEarlyCollection: false, collectionLine: 0.64, hintThresholds: [0.49, 0.56, 0.62], bluffAt: nil)
+        let budget = budgetBytes
+        func bytes(_ fill: Double) -> UInt64 {
+            UInt64(Double(budget) * fill)
+        }
+        switch scene {
+        case .home:
+            return
+        case .sign, .approach, .warning:
+            let stage: (RoundPlan.HintStage, Double) = switch scene {
+            case .sign: (.sign, 0.52)
+            case .approach: (.approach, 0.58)
+            default: (.warning, 0.63)
+            }
+            self.plan = plan
+            hintStage = stage.0
+            demoDonatedBytes = bytes(stage.1)
+            phase = .donating
+        case .delivered, .collected:
+            let delivered = scene == .delivered
+            let collectedPlan = RoundPlan(isEarlyCollection: false, collectionLine: 0.58, hintThresholds: [0.43, 0.50, 0.56], bluffAt: nil)
+            self.plan = delivered ? plan : collectedPlan
+            lastReleaseDuration = 0.042
+            phase = .result(
+                RoundOutcome(
+                    kind: delivered ? .delivered : .collected,
+                    plan: delivered ? plan : collectedPlan,
+                    budgetBytes: budget,
+                    donatedBytes: bytes(delivered ? 0.62 : 0.61),
+                    stoppedAtSafetyLine: false
+                )
+            )
         }
     }
 

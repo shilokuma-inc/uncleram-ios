@@ -25,11 +25,9 @@ struct UncleRAM: App {
         #endif
     }
 
-    /// 撮影モード（ScreenshotDemo）のときは、撮る画面を開く
+    /// 撮影モード（ScreenshotDemo）のときも、ラウンド画面を開く
     @ViewBuilder private var rootView: some View {
-        switch ScreenshotDemo.scene {
-        case .home, nil:
-            RoundScreen()
-        }
+        // 撮影モードの場面は RoundScreen が開く（ScreenshotDemo.Scene はどれもラウンド画面の状態）
+        RoundScreen()
     }
 }
