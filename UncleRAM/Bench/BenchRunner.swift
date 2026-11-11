@@ -30,7 +30,10 @@ final class BenchRunner {
         var footprintPerDonated: Double?
         /// ピークのときの、このアプリの圧縮されている量
         var peakCompressedMegabytes: Double?
+        /// 献上中のフレーム
         var frames: FrameMonitor.Stats
+        /// 離してから結果が出るまで（全解放の間）のフレーム
+        var releaseFrames: FrameMonitor.Stats
     }
 
     struct Summary: Codable, Equatable {
@@ -46,6 +49,9 @@ final class BenchRunner {
         var totalFrames: Int
         var droppedFrames: Int
         var worstFrameIntervalMilliseconds: Double
+        /// 離してから結果が出るまでの、落ちたフレームと最長の間隔
+        var releaseDroppedFrames: Int
+        var releaseWorstFrameIntervalMilliseconds: Double
         var minimumFootprintPerDonated: Double?
         var swapBeforeMegabytes: Double?
         var swapMaxMegabytes: Double?
@@ -179,8 +185,11 @@ final class BenchRunner {
                 swapMax = swap
             }
         }
+        frameMonitor.markRelease()
         engine.endHold(.released)
         let outcome = await engine.waitForResult()
+        // 結果の画面に切り替わる 1 フレーム分も含めて数える
+        try? await Task.sleep(for: .milliseconds(100))
         frameMonitor.stop()
         return RoundRecord(
             index: index,
@@ -193,7 +202,8 @@ final class BenchRunner {
             footprintAfterReleaseMegabytes: ProcessMemory.footprintBytes().map(Self.megabytes),
             footprintPerDonated: Self.ratio(peak: peakFootprint, baseline: baseline, donated: peakDonated),
             peakCompressedMegabytes: peakCompressed.map(Self.megabytes),
-            frames: frameMonitor.stats
+            frames: frameMonitor.stats,
+            releaseFrames: frameMonitor.releaseStats
         )
     }
 
@@ -211,6 +221,8 @@ final class BenchRunner {
             totalFrames: 0,
             droppedFrames: 0,
             worstFrameIntervalMilliseconds: 0,
+            releaseDroppedFrames: 0,
+            releaseWorstFrameIntervalMilliseconds: 0,
             swapBeforeMegabytes: ProcessMemory.swapUsedBytes().map(megabytes),
             swapMaxMegabytes: nil,
             hostStatisticsAvailable: HostMemory.statistics() != nil,
@@ -229,6 +241,8 @@ final class BenchRunner {
         summary.totalFrames = summary.rounds.map(\.frames.frames).reduce(0, +)
         summary.droppedFrames = summary.rounds.map(\.frames.droppedFrames).reduce(0, +)
         summary.worstFrameIntervalMilliseconds = summary.rounds.map(\.frames.worstIntervalMilliseconds).max() ?? 0
+        summary.releaseDroppedFrames = summary.rounds.map(\.releaseFrames.droppedFrames).reduce(0, +)
+        summary.releaseWorstFrameIntervalMilliseconds = summary.rounds.map(\.releaseFrames.worstIntervalMilliseconds).max() ?? 0
         summary.minimumFootprintPerDonated = summary.rounds.compactMap(\.footprintPerDonated).min()
         summary.outcomes = Dictionary(grouping: summary.rounds, by: \.outcome).mapValues(\.count)
     }

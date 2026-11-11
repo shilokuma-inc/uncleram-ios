@@ -19,17 +19,19 @@ final class FrameMonitor: NSObject {
         }
     }
 
+    /// 献上中のフレーム
     private(set) var stats = Stats()
+    /// 離してから結果が出るまで（確保を止めて、全メモリを解放している間）のフレーム
+    private(set) var releaseStats = Stats()
+    private var releasing = false
     private var lastTimestamp: CFTimeInterval?
-    #if os(iOS)
     private var link: CADisplayLink?
-    #elseif os(macOS)
-    private var link: CADisplayLink?
-    #endif
 
     func start() {
         stop()
         stats = Stats()
+        releaseStats = Stats()
+        releasing = false
         lastTimestamp = nil
         #if os(iOS)
         let link = CADisplayLink(target: self, selector: #selector(tick(_:)))
@@ -47,6 +49,11 @@ final class FrameMonitor: NSObject {
         #endif
     }
 
+    /// ここから先のフレームを、解放の間として数える
+    func markRelease() {
+        releasing = true
+    }
+
     func stop() {
         link?.invalidate()
         link = nil
@@ -59,10 +66,16 @@ final class FrameMonitor: NSObject {
         }
         let expected = 1.0 / 60
         let interval = link.timestamp - lastTimestamp
-        stats.frames += 1
-        stats.worstIntervalMilliseconds = max(stats.worstIntervalMilliseconds, interval * 1000)
+        var target = releasing ? releaseStats : stats
+        target.frames += 1
+        target.worstIntervalMilliseconds = max(target.worstIntervalMilliseconds, interval * 1000)
         if interval > expected * 1.5 {
-            stats.droppedFrames += Int((interval / expected).rounded()) - 1
+            target.droppedFrames += Int((interval / expected).rounded()) - 1
+        }
+        if releasing {
+            releaseStats = target
+        } else {
+            stats = target
         }
     }
 }
