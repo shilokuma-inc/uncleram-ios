@@ -1,4 +1,6 @@
 # ビルド（＋テスト）の共通処理。build.yml から workflow_call で呼び出される。
+# アプリは iPhone・iPad と macOS の 1 ターゲットなので、1 つのジョブで両方のプラットフォームを順にビルドする
+# （macOS ランナーの同時実行枠を増やさないよう、プラットフォームごとのジョブには分けない）。
 name: _build
 
 on:
@@ -10,14 +12,16 @@ on:
         # README の Environment と揃える。ランナー側の更新でビルドが変わらないよう固定する
         default: '26.6'
       ui-tests:
-        description: UI テスト（<プロジェクト名>UITests）も実行するか。false なら Unit テストだけ実行する
+        description: >-
+          iOS Simulator でテスト（Unit テスト＋ UI テスト）するか。
+          false なら iOS はビルドだけにし、Unit テストは Simulator を起動しない macOS で実行する
         type: boolean
         default: true
 
 jobs:
   build:
     runs-on: macos-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - name: Select Xcode
@@ -33,15 +37,20 @@ jobs:
 
       - name: Set up environment
         # プロジェクト名と同名の共有スキームが存在することを前提にする
+        env:
+          UI_TESTS: ${{ inputs.ui-tests }}
         run: |
           project=$(basename -s .xcodeproj ./*.xcodeproj)
           echo "PROJECT_NAME=$project" >> "$GITHUB_ENV"
           echo "SCHEME=$project" >> "$GITHUB_ENV"
+          echo "project=$project scheme=$project"
+          # Simulator でテストしない作業ブランチでは選ばない（simctl の初回呼び出しに 30 秒前後かかる）
+          [[ "$UI_TESTS" == "true" ]] || exit 0
           # 最新の iOS ランタイムに存在する iPhone シミュレータを UDID で選ぶ
           # （名前だけの指定は OS:latest を暗黙に要求し、古いランタイムにしかないデバイスだと解決できない）
           simulator=$(xcrun simctl list devices available -j | jq -r '.devices | to_entries | map(select(.key | contains("SimRuntime.iOS"))) | sort_by(.key | capture("iOS-(?<maj>[0-9]+)-(?<min>[0-9]+)") | [(.maj|tonumber),(.min|tonumber)]) | reverse | map(.value[] | select(.name | startswith("iPhone"))) | .[0]')
           echo "SIMULATOR_ID=$(jq -r .udid <<<"$simulator")" >> "$GITHUB_ENV"
-          echo "project=$project scheme=$project simulator=$(jq -r '"\(.name) (\(.udid))"' <<<"$simulator")"
+          echo "simulator=$(jq -r '"\(.name) (\(.udid))"' <<<"$simulator")"
 
       - name: Resolve Swift packages
         run: |
@@ -61,18 +70,12 @@ jobs:
           "$swiftlint" version
           "$swiftlint" lint --strict --reporter github-actions-logging
 
-      - name: Build and test
+      - name: Build and test on iOS Simulator
         # UI テストは共有ランナー上で起動待ちに失敗することがあるため、失敗したテストだけ 1 回再試行する
-        # （-test-iterations は初回を含む実行回数の上限）
-        env:
-          UI_TESTS: ${{ inputs.ui-tests }}
+        # （-test-iterations は初回を含む実行回数の上限）。
+        # 並列テストを有効にすると Simulator の clone を作って起動するため、clone を作らずに実行する
+        if: inputs.ui-tests
         run: |
-          options=()
-          if [[ "$UI_TESTS" != "true" ]]; then
-            # UI テストは Simulator の clone と起動を含めて 2 分前後かかるため、作業ブランチでは省く
-            options+=(-skip-testing:"${SCHEME}UITests")
-          fi
-          # 並列テストを有効にすると Simulator の clone を作って起動するため、clone を作らずに実行する
           xcodebuild test \
             -project "$PROJECT_NAME.xcodeproj" \
             -scheme "$SCHEME" \
@@ -81,8 +84,50 @@ jobs:
             -resultBundlePath TestResults.xcresult \
             -retry-tests-on-failure \
             -test-iterations 2 \
+            -parallel-testing-enabled NO
+
+      - name: Build for iOS Simulator
+        # 作業ブランチでは Simulator を起動しない（共有ランナーでは起動待ちだけで数分かかる）。
+        # iOS はビルドの確認にとどめ、Unit テストは次のステップで macOS 上で実行する
+        if: ${{ !inputs.ui-tests }}
+        run: |
+          xcodebuild build \
+            -project "$PROJECT_NAME.xcodeproj" \
+            -scheme "$SCHEME" \
+            -destination "generic/platform=iOS Simulator" \
+            -derivedDataPath DerivedData \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Test on macOS
+        # ランナーには署名用の証明書が無いためアドホック署名にする。
+        # App Sandbox を有効にしたままアドホック署名すると test runner がアプリに接続できずに止まるため、テストのときだけ無効にする
+        if: ${{ !inputs.ui-tests }}
+        run: |
+          xcodebuild test \
+            -project "$PROJECT_NAME.xcodeproj" \
+            -scheme "$SCHEME" \
+            -destination "platform=macOS,arch=arm64" \
+            -derivedDataPath DerivedData \
+            -resultBundlePath TestResults.xcresult \
+            -skip-testing:"${SCHEME}UITests" \
             -parallel-testing-enabled NO \
-            ${options[@]+"${options[@]}"}
+            CODE_SIGN_IDENTITY=- \
+            CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM= \
+            PROVISIONING_PROFILE_SPECIFIER= \
+            ENABLE_APP_SANDBOX=NO
+
+      - name: Build for macOS
+        # 同じターゲットを macOS 向けにもビルドする。ランナーには署名用の証明書が無いため署名は省く。
+        # 作業ブランチでは Test on macOS でビルド済みのため省く
+        if: inputs.ui-tests
+        run: |
+          xcodebuild build \
+            -project "$PROJECT_NAME.xcodeproj" \
+            -scheme "$SCHEME" \
+            -destination "platform=macOS,arch=arm64" \
+            -derivedDataPath DerivedData \
+            CODE_SIGNING_ALLOWED=NO
 
       - name: Upload test results
         if: ${{ !cancelled() }}
@@ -90,3 +135,4 @@ jobs:
         with:
           name: TestResults.xcresult
           path: TestResults.xcresult
+          if-no-files-found: ignore
