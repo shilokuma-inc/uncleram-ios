@@ -454,7 +454,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = UncleRAM/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Uncle RAM";
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.casual-games";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.games";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UIUserInterfaceStyle = Light;
@@ -486,7 +486,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = UncleRAM/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Uncle RAM";
-				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.casual-games";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.games";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UIUserInterfaceStyle = Light;
