@@ -2,6 +2,9 @@ import Foundation
 import Observation
 import os
 import StoreKit
+#if os(iOS)
+import UIKit
+#endif
 
 /// 試作の合格条件を測る計測。ラウンドを自動で続けて、解放の時間・落ちたフレーム・使用量・スワップを記録する。
 ///
@@ -114,6 +117,7 @@ final class BenchRunner {
         plannedRounds = rounds
         savedURL = nil
         engine.allocator.fillMode = fillMode
+        Self.setIdleTimerDisabled(true)
         task = Task { [weak self] in
             await self?.run(rounds: rounds, fillMode: fillMode)
         }
@@ -121,6 +125,22 @@ final class BenchRunner {
 
     func cancel() {
         task?.cancel()
+    }
+
+    /// バックグラウンドに移ったら計測を中止する（裏でメモリを確保し続けないように。ラウンドは RoundEngine が無効にする）
+    func appDidEnterBackground() {
+        guard isRunning else {
+            return
+        }
+        logger.info("バックグラウンドに移ったので、計測を中止します")
+        cancel()
+    }
+
+    /// 計測の間は画面の自動ロックを止める（ロックされるとバックグラウンドに移って、ラウンドが無効になるため）
+    private static func setIdleTimerDisabled(_ disabled: Bool) {
+        #if os(iOS)
+        UIApplication.shared.isIdleTimerDisabled = disabled
+        #endif
     }
 
     func dismissSummary() {
@@ -169,6 +189,7 @@ final class BenchRunner {
         if case .result = engine.phase {
             engine.reset()
         }
+        Self.setIdleTimerDisabled(false)
         isRunning = false
     }
 

@@ -47,6 +47,7 @@ struct RoundScreen: View {
                 engine.endHold(.inactive)
             case .background:
                 engine.void(.background)
+                bench.appDidEnterBackground()
             case .active:
                 engine.sceneBecameActive()
             @unknown default:
