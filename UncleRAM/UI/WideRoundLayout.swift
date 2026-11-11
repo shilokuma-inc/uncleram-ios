@@ -110,16 +110,18 @@ struct WideRoundLayout: View {
                 } else {
                     HoldButton(engine: engine, diameter: 236, title: holdTitle)
                 }
+                #if os(macOS)
                 HStack(spacing: 10) {
                     Text(verbatim: "space")
                         .font(Theme.typewriter(12))
                         .padding(.horizontal, 10)
                         .padding(.vertical, 3)
                         .overlay { Rectangle().strokeBorder(Theme.navy, lineWidth: 1.5) }
-                    Text(holdHint)
+                    Text("クリックの長押しでも献上できます")
                         .font(Theme.mincho(13, bold: false))
                         .foregroundStyle(Theme.subText)
                 }
+                #endif
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -144,8 +146,10 @@ struct WideRoundLayout: View {
         HStack {
             Text("回収ラインが近づくと、会長の言葉・飛行船・画面のノイズが変わります")
             Spacer()
+            #if os(macOS)
             Text("space 長押し: 献上")
                 .font(Theme.typewriter(12))
+            #endif
         }
         .font(Theme.mincho(12, bold: false))
         .foregroundStyle(Theme.subText)
@@ -155,11 +159,9 @@ struct WideRoundLayout: View {
 
     #if os(macOS)
     private var holdTitle: LocalizedStringKey { "スペースを長押し" }
-    private var holdHint: LocalizedStringKey { "クリックの長押しでも献上できます" }
     private var budgetNote: LocalizedStringKey? { "（使用可能メモリの 60%）" }
     #else
     private var holdTitle: LocalizedStringKey { "長押しで献上" }
-    private var holdHint: LocalizedStringKey { "スペースキーの長押しでも献上できます" }
     private var budgetNote: LocalizedStringKey? { nil }
     #endif
 }
