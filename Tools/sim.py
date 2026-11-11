@@ -30,7 +30,7 @@ def nm(x,L):
     d=L-x
     return 3 if d<=3 else 1.5 if d<=10 else 1
 def stages(L,jit):
-    s1=L-15+random.uniform(-4,4)*jit; s2=L-8+random.uniform(-2.5,2.5)*jit; s3=L-3+random.uniform(-1.5,1.5)*jit
+    s1=L-15+random.uniform(-4,4)*jit; s2=L-8+random.uniform(-2.5,2.5)*jit; s3=L-2+random.uniform(-2,2)  # 警告は SPEC.md「ヒントの出方」の手前 2%・±2%。ヒント精度アップでは変わらない
     s1=max(s1,5);s2=max(s2,s1+0.5);s3=max(s3,s2+0.5)
     return s1,s2,s3
 def run(strategy,early=0.1,jit=1.0,bluff=0.15,react=0.25):
