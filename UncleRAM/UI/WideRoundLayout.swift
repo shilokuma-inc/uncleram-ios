@@ -62,6 +62,7 @@ struct WideRoundLayout: View {
                     .frame(maxWidth: .infinity)
                     .frame(height: 300)
                     .clipped()
+                    .allowsHitTesting(false)
                     .overlay(alignment: .bottom) {
                         Rectangle().fill(Theme.navy).frame(height: 1.5)
                     }

@@ -56,6 +56,8 @@ struct PaperBackground: View {
                 Image(wide ? .paperWide : .paperBackground)
                     .resizable()
                     .scaledToFill()
+                    // 枠より大きく広げた画像は、見た目は切り抜いてもタップの判定が枠の外に残るので、判定から外す
+                    .allowsHitTesting(false)
             }
             .clipped()
             .ignoresSafeArea()
@@ -73,6 +75,8 @@ struct InkSurface: View {
                     .resizable()
                     .scaledToFill()
                     .blendMode(.multiply)
+                    // 枠より大きく広げた画像が、近くのボタン（右上の「計測」など）のタップを吸い取らないようにする
+                    .allowsHitTesting(false)
             }
             .clipped()
     }
