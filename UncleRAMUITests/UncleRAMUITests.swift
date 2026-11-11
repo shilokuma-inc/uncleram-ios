@@ -22,6 +22,18 @@ final class UncleRAMUITests: XCTestCase {
         XCTAssertTrue(app.buttons["献上する"].waitForExistence(timeout: 5))
     }
 
+    /// 右上の「計測」を押すと、計測のメニューが開く（紙の画像などの飾りがタップを吸い取らないこと）
+    @MainActor
+    func testBenchMenuOpens() throws {
+        let app = XCUIApplication()
+        app.launch()
+
+        let bench = app.buttons["計測"]
+        XCTAssertTrue(bench.waitForExistence(timeout: 5))
+        bench.tap()
+        XCTAssertTrue(app.buttons["100 ラウンド（全体を乱数で埋める）"].waitForExistence(timeout: 5))
+    }
+
     /// 長押しして離すと、結果（もう一度献上する）が出る。1.5 秒では枠の 15% ほどなので、回収ラインには届かない
     @MainActor
     func testHoldAndReleaseShowsResult() throws {
