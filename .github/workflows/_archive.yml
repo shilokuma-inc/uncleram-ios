@@ -1,8 +1,9 @@
-# Archive → IPA Export（→ App Store Connect へアップロード）の共通処理。
-# archive.yml / upload.yml から workflow_call で呼び出される。
+# Archive → Export（iOS は IPA、macOS は pkg）（→ App Store Connect へアップロード）の共通処理。
+# archive.yml / upload.yml から workflow_call で呼び出される。1 回の呼び出しで 1 つのプラットフォームを扱う。
 #
 # 認証はすべて App Store Connect API Key で行う（Apple ID / App 用パスワードは使わない）。
 # アップロードは ExportOptions.plist の destination を upload にした xcodebuild -exportArchive で行う。
+# iOS と macOS で同じ EXPORT_OPTIONS（method=app-store-connect）を使う。
 name: _archive
 
 on:
@@ -13,8 +14,12 @@ on:
         type: string
         # README の Environment と揃える。ランナー側の更新でビルドが変わらないよう固定する
         default: '26.6'
+      platform:
+        description: アーカイブするプラットフォーム（iOS / macOS）
+        type: string
+        default: iOS
       upload:
-        description: Export した IPA を App Store Connect へアップロードするか
+        description: Export したもの（IPA / pkg）を App Store Connect へアップロードするか
         type: boolean
         default: false
     secrets:
@@ -35,9 +40,92 @@ on:
         required: false
 
 jobs:
+  bundle-id:
+    # Bundle ID（App ID）を UNIVERSAL で登録する（iOS と macOS で 1 つの App ID を使う）。2 回目以降は確認だけ。
+    # macOS のランナーを使わないよう ubuntu で行う（.github/scripts/ensure-bundle-id.rb）
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Create API private key
+        # Secrets はシェル展開ではなく env 経由で渡す。鍵はリポジトリ配下ではなく RUNNER_TEMP に置く
+        env:
+          APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/private_keys"
+          printf '%s' "$APPLE_API_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/private_keys/AuthKey.p8"
+
+      - name: Register Bundle ID
+        env:
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+          API_KEY_PATH: ${{ runner.temp }}/private_keys/AuthKey.p8
+        run: |
+          set -euo pipefail
+          project=$(basename -s .xcodeproj ./*.xcodeproj)
+          # Bundle ID の名前は表示名（INFOPLIST_KEY_CFBundleDisplayName）にそろえる
+          app_name=$(sed -n 's/.*INFOPLIST_KEY_CFBundleDisplayName = "\{0,1\}\([^";]*\)"\{0,1\};.*/\1/p' "$project.xcodeproj/project.pbxproj" | head -1)
+          BUNDLE_ID=$(python3 Tools/app_store_config.py bundle-id) \
+          APP_NAME="${app_name:-$project}" \
+            ruby .github/scripts/ensure-bundle-id.rb
+
+  platform:
+    # macOS のアップロードは、App Store Connect のアプリに macOS のプラットフォームが追加されているときだけ行う。
+    # 追加は Web でしかできず、追加する前にアップロードすると毎回失敗するため、先に読み取りだけで確かめる。
+    # 無ければ手順を Job Summary に出して archive を飛ばす（失敗にはしない）。macOS のランナーを使わないよう ubuntu で確かめる
+    if: inputs.platform != 'iOS' && inputs.upload
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      available: ${{ steps.check.outputs.available }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Create API private key
+        # Secrets はシェル展開ではなく env 経由で渡す。鍵はリポジトリ配下ではなく RUNNER_TEMP に置く
+        env:
+          APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/private_keys"
+          printf '%s' "$APPLE_API_KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/private_keys/AuthKey.p8"
+
+      - name: Check ${{ inputs.platform }} platform in App Store Connect
+        id: check
+        env:
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+          API_KEY_PATH: ${{ runner.temp }}/private_keys/AuthKey.p8
+          PLATFORM: MAC_OS
+        run: |
+          set -euo pipefail
+          # Bundle ID は Configs/Project.xcconfig の APP_BUNDLE_IDENTIFIER（アーカイブの前なので xcarchive からは読めない）
+          BUNDLE_ID=$(python3 Tools/app_store_config.py bundle-id) \
+            ruby .github/scripts/check-app-store-platform.rb
+
   archive:
+    needs: [bundle-id, platform]
+    # Bundle ID の登録が済み、platform を飛ばした（iOS・アップロードしない）ときと、プラットフォームがあったときだけ動く。
+    # needs が skipped だと既定では後続も飛ぶので !cancelled() を付ける。platform が失敗したら available は空なので飛ぶ
+    if: ${{ !cancelled() && needs.bundle-id.result == 'success' && (needs.platform.result == 'skipped' || needs.platform.outputs.available == 'true') }}
     runs-on: macos-latest
     timeout-minutes: 45
+    permissions:
+      contents: read
 
     steps:
       - name: Select Xcode
@@ -56,34 +144,64 @@ jobs:
         # ExportOptions.plist と API 秘密鍵はリポジトリ配下ではなく RUNNER_TEMP に置く
         env:
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          PLATFORM: ${{ inputs.platform }}
         run: |
+          case "$PLATFORM" in
+            iOS) package_extension=ipa ;;
+            macOS) package_extension=pkg ;;
+            *)
+              echo "::error::platform は iOS か macOS を指定してください（${PLATFORM}）"
+              exit 1
+              ;;
+          esac
           project=$(basename -s .xcodeproj ./*.xcodeproj)
           {
             echo "PROJECT_NAME=$project"
             echo "SCHEME=$project"
+            echo "PACKAGE_EXTENSION=$package_extension"
             echo "EXPORT_OPTIONS_PATH=$RUNNER_TEMP/ExportOptions.plist"
             echo "API_KEY_PATH=$RUNNER_TEMP/private_keys/AuthKey_$APPLE_API_KEY_ID.p8"
           } >> "$GITHUB_ENV"
-          echo "project=$project scheme=$project"
+          echo "project=$project scheme=$project platform=$PLATFORM package=$package_extension"
 
       - name: Archive
+        env:
+          PLATFORM: ${{ inputs.platform }}
         run: |
-          xcodebuild archive \
-            -project "$PROJECT_NAME.xcodeproj" \
-            -scheme "$SCHEME" \
-            -sdk iphoneos \
-            -configuration Release \
-            -archivePath "$RUNNER_TEMP/build.xcarchive" \
-            CODE_SIGNING_ALLOWED=NO
+          if [ "$PLATFORM" = macOS ]; then
+            # macOS はアドホック署名でアーカイブする。CODE_SIGNING_ALLOWED=NO だと App Sandbox のエンタイトルメント
+            # （ENABLE_APP_SANDBOX から作られる）が実行ファイルに埋め込まれず、Export で配布用に署名し直しても sandbox の無いアプリになる
+            # （Mac App Store は sandbox を必須にしている）。配布用の署名は iOS と同じく Export で行う
+            xcodebuild archive \
+              -project "$PROJECT_NAME.xcodeproj" \
+              -scheme "$SCHEME" \
+              -destination 'generic/platform=macOS' \
+              -configuration Release \
+              -archivePath "$RUNNER_TEMP/build.xcarchive" \
+              CODE_SIGN_IDENTITY=- \
+              CODE_SIGN_STYLE=Manual \
+              PROVISIONING_PROFILE_SPECIFIER=
+          else
+            xcodebuild archive \
+              -project "$PROJECT_NAME.xcodeproj" \
+              -scheme "$SCHEME" \
+              -sdk iphoneos \
+              -configuration Release \
+              -archivePath "$RUNNER_TEMP/build.xcarchive" \
+              CODE_SIGNING_ALLOWED=NO
+          fi
 
       - name: Fix signatures of stub frameworks
         # 静的な xcframework（Firebase・Google Mobile Ads など）は、同梱するときに Xcode がバイナリを外して空のスタブを差し込む（Injecting stub binary into codeless framework）。
         # スタブはリンカーの仮の署名のままで識別子が `arm64-apple` になっていて、署名なしの Archive では Xcode の署名で直らない。
         # Export はこの識別子のまま再署名するので、App Store Connect が Invalid Signature で弾く。
-        # Info.plist の CFBundleIdentifier と識別子が違うフレームワークを、その識別子でアドホック署名し直しておく（本番の署名は Export がする）
+        # Info.plist の CFBundleIdentifier と識別子が違うフレームワークを、その識別子でアドホック署名し直しておく（本番の署名は Export がする）。
+        # macOS の .app は Frameworks が Contents の下にある
         run: |
           app_path=$(/usr/libexec/PlistBuddy -c 'Print :ApplicationProperties:ApplicationPath' "$RUNNER_TEMP/build.xcarchive/Info.plist")
-          frameworks="$RUNNER_TEMP/build.xcarchive/Products/$app_path/Frameworks"
+          app="$RUNNER_TEMP/build.xcarchive/Products/$app_path"
+          frameworks="$app/Frameworks"
+          [[ -d "$app/Contents" ]] && frameworks="$app/Contents/Frameworks"
           if [[ ! -d "$frameworks" ]]; then
             echo "同梱のフレームワークはありません"
             exit 0
@@ -91,7 +209,9 @@ jobs:
           fixed=0
           for framework in "$frameworks"/*.framework; do
             [[ -e "$framework" ]] || continue
-            bundle_id=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$framework/Info.plist")
+            info="$framework/Info.plist"
+            [[ -f "$info" ]] || info="$framework/Resources/Info.plist"
+            bundle_id=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$info")
             identifier=$(codesign -dv "$framework" 2>&1 | sed -n 's/^Identifier=//p')
             if [[ "$identifier" != "$bundle_id" ]]; then
               codesign --force --sign - --identifier "$bundle_id" "$framework"
@@ -112,7 +232,8 @@ jobs:
           mkdir -p "$(dirname "$API_KEY_PATH")"
           printf '%s' "$APPLE_API_KEY_BASE64" | base64 --decode > "$API_KEY_PATH"
 
-      - name: Export IPA
+      - name: Export ${{ inputs.platform == 'macOS' && 'pkg' || 'IPA' }}
+        # method=app-store-connect のまま、iOS は IPA、macOS は pkg（Mac Installer Distribution で署名）が出る
         env:
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
@@ -127,24 +248,49 @@ jobs:
             -authenticationKeyID "$APPLE_API_KEY_ID" \
             -authenticationKeyIssuerID "$APPLE_API_ISSUER_ID"
 
-      - name: Upload IPA to GitHub
+      - name: Upload ${{ inputs.platform == 'macOS' && 'pkg' || 'IPA' }} to GitHub
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ env.PROJECT_NAME }}.ipa
-          path: ${{ runner.temp }}/export/*.ipa
+          name: ${{ env.PROJECT_NAME }}-${{ inputs.platform }}.${{ env.PACKAGE_EXTENSION }}
+          path: ${{ runner.temp }}/export/*.${{ env.PACKAGE_EXTENSION }}
           if-no-files-found: error
+
+      - name: Check App Sandbox in pkg
+        # Mac App Store は App Sandbox を必須にしている。archive の署名から entitlement が落ちると、アップロード後の処理で弾かれて
+        # 原因が分かりにくいので、Export した pkg の .app に sandbox の entitlement が残ったかを、アップロードの前に確かめる
+        if: ${{ inputs.platform == 'macOS' }}
+        run: |
+          work="$RUNNER_TEMP/pkg-check"
+          rm -rf "$work"
+          pkg=$(find "$RUNNER_TEMP/export" -maxdepth 1 -name "*.pkg" | head -1)
+          pkgutil --expand-full "$pkg" "$work"
+          app=$(find "$work" -maxdepth 5 -type d -name '*.app' | head -1)
+          if [[ -z "$app" ]]; then
+            echo "::error::pkg の中に .app が見つかりません: $pkg"
+            exit 1
+          fi
+          codesign -d --entitlements - --xml "$app" > "$work/entitlements.plist" 2>/dev/null
+          if [[ "$(/usr/libexec/PlistBuddy -c 'Print :com.apple.security.app-sandbox' "$work/entitlements.plist" 2>/dev/null)" != true ]]; then
+            echo "::error::Export した pkg の $(basename "$app") に App Sandbox の entitlement がありません"
+            cat "$work/entitlements.plist"
+            exit 1
+          fi
+          echo "$(basename "$app") の App Sandbox は有効です"
 
       - name: Check app exists in App Store Connect
         # App Store Connect にアプリが無いと、アップロードが "Error Downloading App Information" で失敗し原因が分かりにくい。
         # アプリの作成は API でできないため、ここでは読み取りだけで確認し、無ければ作成手順を Job Summary に出して止める。
-        # Bundle ID は直前の Export で Developer Portal に登録済みなので、この時点で Web 画面から選べる
-        if: ${{ inputs.upload }}
+        # Bundle ID は bundle-id ジョブで Developer Portal に登録済みなので、この時点で Web 画面から選べる。
+        # macOS は platform ジョブでアプリとプラットフォームを確かめ済みなので、iOS だけで行う
+        if: ${{ inputs.upload && inputs.platform == 'iOS' }}
         env:
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
         run: |
-          BUNDLE_ID=$(/usr/libexec/PlistBuddy -c 'Print :ApplicationProperties:CFBundleIdentifier' "$RUNNER_TEMP/build.xcarchive/Info.plist") \
-          APP_NAME="$PROJECT_NAME" \
+          archive="$RUNNER_TEMP/build.xcarchive"
+          app_path=$(/usr/libexec/PlistBuddy -c 'Print :ApplicationProperties:ApplicationPath' "$archive/Info.plist")
+          BUNDLE_ID=$(/usr/libexec/PlistBuddy -c 'Print :ApplicationProperties:CFBundleIdentifier' "$archive/Info.plist") \
+          APP_NAME=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$archive/Products/$app_path/Info.plist") \
             ruby .github/scripts/check-app-store-app.rb
 
       - name: Set up TestFlight internal testers
@@ -152,8 +298,9 @@ jobs:
         # アップロードより前に済ませておくと、このあとのビルドも処理が終わりしだい配信される。2 回目以降は確認だけで何もしない。
         # テスターの設定に失敗してもアップロードは止めない（Job Summary と注釈で知らせる）。
         # メールアドレスは変数から渡さない。ステップの env の表示で、変数の値はそのまま、Secret の値は *** でログに出る（public リポジトリのログは誰でも見られる）。
-        # 以前の変数 TESTFLIGHT_INTERNAL_TESTERS は値を読まず、残っているかだけを見て Secret に移すよう知らせる
-        if: ${{ inputs.upload }}
+        # 以前の変数 TESTFLIGHT_INTERNAL_TESTERS は値を読まず、残っているかだけを見て Secret に移すよう知らせる。
+        # テストグループはプラットフォームに共通なので、iOS のアップロードのときだけ行う
+        if: ${{ inputs.upload && inputs.platform == 'iOS' }}
         continue-on-error: true
         env:
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
@@ -169,7 +316,7 @@ jobs:
 
       - name: Upload to App Store Connect
         # ビルド番号は Xcode に採番させる（manageAppVersionAndBuildNumber）。App Store Connect 上の最新ビルド番号を見て
-        # 自動で増やすので、xcconfig の CURRENT_PROJECT_VERSION を手で上げる必要はない。
+        # 自動で増やすので、xcconfig の CURRENT_PROJECT_VERSION を手で上げる必要はない（プラットフォームごとに別々に数える）。
         # org 共有の EXPORT_OPTIONS Secret は他リポジトリでも使うため書き換えず、ランナー上のコピーだけを上書きする
         if: ${{ inputs.upload }}
         env:
