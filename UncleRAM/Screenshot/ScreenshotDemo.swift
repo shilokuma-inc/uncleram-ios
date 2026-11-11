@@ -17,7 +17,18 @@ import Foundation
 enum ScreenshotDemo {
     /// 撮る画面。rawValue が AppStore/screenshots.json の scene と対応する
     enum Scene: String {
+        /// 待機中のラウンド画面
         case home
+        /// 献上中・ヒントの 1 段階目（気配）
+        case sign
+        /// 献上中・ヒントの 2 段階目（回収飛行船の接近）
+        case approach
+        /// 献上中・ヒントの 3 段階目（警告のノイズ）
+        case warning
+        /// 結果: ニアミスで納品
+        case delivered
+        /// 結果: 回収
+        case collected
     }
 
     /// 撮影モードで起動しているか

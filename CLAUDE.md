@@ -68,8 +68,12 @@ xcodebuild test -project UncleRAM.xcodeproj -scheme UncleRAM -destination 'platf
   ENABLE_APP_SANDBOX=NO
 # SwiftLint（CI と同じ。SPM が解決したバイナリを使う）
 "$(find <DerivedData>/SourcePackages/artifacts -type f -name swiftlint -path '*macos*' | head -1)" lint --strict
-# 数値の試算（早期回収・ヒント・速さを変えたら回し直す）
+# 数値の試算（早期回収・ヒント・速さを変えたら回し直す。1 分ほどかかる）
 python3 Tools/sim.py
+# 試作の計測（ラウンドを自動で続けて、解放の時間・落ちたフレーム・使用量・スワップを JSON に残す）
+<アプリ> -bench 100 -bench-fill full   # sparse にすると、ページごとに少しだけ書く方式
+# 撮影モード（メモリを確保せずに、ラウンドの場面を表示する。PR のスクリーンショット用）
+<アプリ> -screenshot-demo -screenshot-scene approach   # ほかの場面: home・sign・warning・delivered・collected
 ```
 
 - Simulator の `os_proc_available_memory()` は実際の値を返さないので、仮の枠（例: 2GB）で動かす（SPEC.md「技術仕様」）
