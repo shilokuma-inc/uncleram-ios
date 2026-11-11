@@ -4,6 +4,7 @@ import SwiftUI
 /// 左にポスターと会長、中央に献上量と長押しボタン、右に回収飛行船と献上中の明細。広げると中央の列が伸びる
 struct WideRoundLayout: View {
     let engine: RoundEngine
+    let bench: BenchRunner
 
     var body: some View {
         VStack(spacing: 14) {
@@ -47,6 +48,7 @@ struct WideRoundLayout: View {
                     .foregroundStyle(Theme.subText)
                 Text("取引先: \(engine.client.name)")
                     .font(Theme.mincho(15))
+                BenchButton(bench: bench)
             }
         }
     }

@@ -3,6 +3,7 @@ import SwiftUI
 /// iPhone（と、狭い iPad）のラウンド画面。docs/design/Round.png（390 × 844）に合わせる
 struct CompactRoundLayout: View {
     let engine: RoundEngine
+    let bench: BenchRunner
     /// 画面の高さ。iPhone SE のように低い画面では、数字とボタンを小さくする
     let height: CGFloat
 
@@ -50,6 +51,8 @@ struct CompactRoundLayout: View {
                 Text("取引先: \(engine.client.name)")
                     .font(Theme.mincho(15))
             }
+            Spacer()
+            BenchButton(bench: bench)
         }
     }
 }

@@ -8,11 +8,13 @@ struct RoundScreen: View {
 
     @State private var engine: RoundEngine
     @State private var monitor: RoundEventMonitor
+    @State private var bench: BenchRunner
     @Environment(\.scenePhase) private var scenePhase
 
     init(engine: RoundEngine = RoundEngine()) {
         _engine = State(initialValue: engine)
         _monitor = State(initialValue: RoundEventMonitor(engine: engine))
+        _bench = State(initialValue: BenchRunner(engine: engine))
     }
 
     var body: some View {
@@ -26,8 +28,14 @@ struct RoundScreen: View {
                 }
             }
         }
+        .overlay(alignment: .bottom) {
+            BenchStatusBar(bench: bench)
+        }
         .preferredColorScheme(.light)
-        .onAppear { monitor.start() }
+        .onAppear {
+            monitor.start()
+            bench.startFromLaunchArgumentsIfNeeded()
+        }
         .onDisappear { monitor.stop() }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
@@ -52,9 +60,9 @@ struct RoundScreen: View {
             }
         default:
             if wide {
-                WideRoundLayout(engine: engine)
+                WideRoundLayout(engine: engine, bench: bench)
             } else {
-                CompactRoundLayout(engine: engine, height: size.height)
+                CompactRoundLayout(engine: engine, bench: bench, height: size.height)
                     .frame(maxWidth: 480)
             }
         }
