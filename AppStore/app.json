@@ -7,10 +7,10 @@
     "screenshotDemoSource: 撮影モードの Swift ファイル。screenshots.json の scene が ScreenshotDemo.Scene にあるかを突き合わせる。",
     "appIcon: クリエイティブアセットに載せるアプリアイコン。"
   ],
-  "project": "IOSTemplateApp.xcodeproj",
-  "scheme": "IOSTemplateApp",
+  "project": "UncleRAM.xcodeproj",
+  "scheme": "UncleRAM",
   "configuration": "Release",
-  "simulatorPrefix": "IOSTemplateApp",
-  "screenshotDemoSource": "IOSTemplateApp/Screenshot/ScreenshotDemo.swift",
-  "appIcon": "IOSTemplateApp/Assets.xcassets/AppIcon.appiconset/AppIcon.png"
+  "simulatorPrefix": "UncleRAM",
+  "screenshotDemoSource": "UncleRAM/Screenshot/ScreenshotDemo.swift",
+  "appIcon": "UncleRAM/Assets.xcassets/AppIcon.appiconset/AppIcon.png"
 }
