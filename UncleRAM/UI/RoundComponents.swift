@@ -267,9 +267,9 @@ struct Airship: View {
         case .none, .sign:
             1
         case .approach:
-            1.35
+            1.15
         case .warning:
-            1.7
+            1.3
         }
     }
 
