@@ -45,13 +45,19 @@ nonisolated struct HostMemoryProbe: MemoryProbe {
 /// Simulator。`os_proc_available_memory()` が実際の値を返さないので、仮の枠で動かす（docs/SPEC.md「技術仕様」）
 nonisolated struct SimulatedMemoryProbe: MemoryProbe {
     let totalBytes: UInt64
+    /// 仮の残量に加えて、実際の Mac の空き（host_statistics64）でも残量を抑えるか。単体テストでは結果がぶれないよう抑えない
+    var limitsByHost = false
 
     func budgetBytes() -> UInt64 {
         totalBytes
     }
 
     func availableBytes(allocatedByRound: UInt64) -> UInt64 {
-        totalBytes > allocatedByRound ? totalBytes - allocatedByRound : 0
+        let simulated = totalBytes > allocatedByRound ? totalBytes - allocatedByRound : 0
+        guard limitsByHost, let host = HostMemory.statistics()?.usableBytes else {
+            return simulated
+        }
+        return min(simulated, host)
     }
 }
 
@@ -62,7 +68,7 @@ nonisolated enum MemoryProbes {
     /// 実行している環境の量り方
     static var current: any MemoryProbe {
         #if targetEnvironment(simulator)
-        SimulatedMemoryProbe(totalBytes: simulatorBudget)
+        SimulatedMemoryProbe(totalBytes: simulatorBudget, limitsByHost: true)
         #elseif os(macOS)
         HostMemoryProbe()
         #else
