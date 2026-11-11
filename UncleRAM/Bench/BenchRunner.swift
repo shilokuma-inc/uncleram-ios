@@ -52,6 +52,8 @@ final class BenchRunner {
         /// 離してから結果が出るまでの、落ちたフレームと最長の間隔
         var releaseDroppedFrames: Int
         var releaseWorstFrameIntervalMilliseconds: Double
+        /// 献上中の平均の更新の速さが、いちばん遅かったラウンドの値（回 / 秒）
+        var slowestAverageFramesPerSecond: Double?
         var minimumFootprintPerDonated: Double?
         var swapBeforeMegabytes: Double?
         var swapMaxMegabytes: Double?
@@ -139,13 +141,19 @@ final class BenchRunner {
                 engine.reset()
             }
             try? await Task.sleep(for: .milliseconds(400))
+            guard !Task.isCancelled else {
+                break
+            }
             engine.refreshBudget()
             guard engine.phase == .ready else {
                 logger.error("ラウンド \(index) を始められません: \(String(describing: self.engine.phase))")
                 break
             }
             // 離す位置を散らす（早いもの・回収ラインを越えるもの・安全ラインまで押すもの）
-            let record = await playRound(index: index, target: random.uniform(0.2...0.86), swapMax: &swapMax)
+            // 中止したラウンドは記録しない（途中で止めた量が、納品として数えられてしまうため）
+            guard let record = await playRound(index: index, target: random.uniform(0.2...0.86), swapMax: &swapMax) else {
+                break
+            }
             summary.rounds.append(record)
             summary.completedRounds = index
             progress = index
@@ -165,7 +173,7 @@ final class BenchRunner {
     }
 
     /// 1 ラウンドを、献上量が target（枠に対する割合）に届くまで押し続けて遊ぶ
-    private func playRound(index: Int, target: Double, swapMax: inout UInt64?) async -> RoundRecord {
+    private func playRound(index: Int, target: Double, swapMax: inout UInt64?) async -> RoundRecord? {
         let baseline = ProcessMemory.footprintBytes()
         frameMonitor.start()
         engine.beginHold()
@@ -186,11 +194,16 @@ final class BenchRunner {
             }
         }
         frameMonitor.markRelease()
+        // 中止されたときも、確保したメモリは必ず解放する
         engine.endHold(.released)
         let outcome = await engine.waitForResult()
+        let cancelled = Task.isCancelled
         // 結果の画面に切り替わる 1 フレーム分も含めて数える
         try? await Task.sleep(for: .milliseconds(100))
         frameMonitor.stop()
+        guard !cancelled else {
+            return nil
+        }
         return RoundRecord(
             index: index,
             outcome: outcome.map(Self.describe) ?? "none",
@@ -200,7 +213,11 @@ final class BenchRunner {
             releaseMilliseconds: (engine.lastReleaseDuration ?? 0) * 1000,
             peakFootprintMegabytes: peakFootprint.map(Self.megabytes),
             footprintAfterReleaseMegabytes: ProcessMemory.footprintBytes().map(Self.megabytes),
-            footprintPerDonated: Self.ratio(peak: peakFootprint, baseline: baseline, donated: peakDonated),
+            footprintPerDonated: Self.ratio(
+                peak: peakFootprint,
+                baseline: baseline,
+                donated: peakDonated > 0 ? peakDonated : (outcome?.donatedBytes ?? 0)
+            ),
             peakCompressedMegabytes: peakCompressed.map(Self.megabytes),
             frames: frameMonitor.stats,
             releaseFrames: frameMonitor.releaseStats
@@ -223,6 +240,7 @@ final class BenchRunner {
             worstFrameIntervalMilliseconds: 0,
             releaseDroppedFrames: 0,
             releaseWorstFrameIntervalMilliseconds: 0,
+            slowestAverageFramesPerSecond: nil,
             swapBeforeMegabytes: ProcessMemory.swapUsedBytes().map(megabytes),
             swapMaxMegabytes: nil,
             hostStatisticsAvailable: HostMemory.statistics() != nil,
@@ -243,6 +261,10 @@ final class BenchRunner {
         summary.worstFrameIntervalMilliseconds = summary.rounds.map(\.frames.worstIntervalMilliseconds).max() ?? 0
         summary.releaseDroppedFrames = summary.rounds.map(\.releaseFrames.droppedFrames).reduce(0, +)
         summary.releaseWorstFrameIntervalMilliseconds = summary.rounds.map(\.releaseFrames.worstIntervalMilliseconds).max() ?? 0
+        summary.slowestAverageFramesPerSecond = summary.rounds
+            .filter { $0.frames.seconds > 0 }
+            .map { ($0.frames.averageFramesPerSecond * 10).rounded() / 10 }
+            .min()
         summary.minimumFootprintPerDonated = summary.rounds.compactMap(\.footprintPerDonated).min()
         summary.outcomes = Dictionary(grouping: summary.rounds, by: \.outcome).mapValues(\.count)
     }
@@ -296,9 +318,13 @@ final class BenchRunner {
         (Double(bytes) / 1_048_576 * 10).rounded() / 10
     }
 
+    /// 使用量の増えた分 ÷ 献上量。使用量が増えなかったら 0（計上されていない）。量れなかったときだけ nil
     private static func ratio(peak: UInt64?, baseline: UInt64?, donated: UInt64) -> Double? {
-        guard let peak, let baseline, donated > 0, peak > baseline else {
+        guard let peak, let baseline, donated > 0 else {
             return nil
+        }
+        guard peak > baseline else {
+            return 0
         }
         return (Double(peak - baseline) / Double(donated) * 1000).rounded() / 1000
     }

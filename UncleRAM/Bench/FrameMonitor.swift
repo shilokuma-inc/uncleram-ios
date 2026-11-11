@@ -13,6 +13,13 @@ final class FrameMonitor: NSObject {
         var frames = 0
         var droppedFrames = 0
         var worstIntervalMilliseconds = 0.0
+        /// 数えた間の秒数。60fps 未満の一定の速さ（50Hz など）は落ちたフレームに表れないので、平均の速さも見る
+        var seconds = 0.0
+
+        /// 平均の更新の速さ（回 / 秒）
+        var averageFramesPerSecond: Double {
+            seconds > 0 ? Double(frames) / seconds : 0
+        }
 
         var droppedRatio: Double {
             frames + droppedFrames > 0 ? Double(droppedFrames) / Double(frames + droppedFrames) : 0
@@ -68,6 +75,7 @@ final class FrameMonitor: NSObject {
         let interval = link.timestamp - lastTimestamp
         var target = releasing ? releaseStats : stats
         target.frames += 1
+        target.seconds += interval
         target.worstIntervalMilliseconds = max(target.worstIntervalMilliseconds, interval * 1000)
         if interval > expected * 1.5 {
             target.droppedFrames += Int((interval / expected).rounded()) - 1

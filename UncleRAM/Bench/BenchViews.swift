@@ -73,6 +73,7 @@ struct BenchSummaryView: View {
                 line("200ms を越えた解放", "\(summary.releasesOver200Milliseconds) 回")
                 line("落ちたフレーム（献上中）", droppedFrames)
                 line("落ちたフレーム（解放の間）", releaseDroppedFrames)
+                line("平均の速さ（いちばん遅いラウンド）", summary.slowestAverageFramesPerSecond.map { "\(format($0, digits: 1)) 回/秒" } ?? "-")
                 line("使用量 ÷ 献上量（最小）", summary.minimumFootprintPerDonated.map { format($0, digits: 3) } ?? "-")
                 line("スワップ", swap)
                 line("host_statistics64", summary.hostStatisticsAvailable ? "取れる" : "取れない")
