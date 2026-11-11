@@ -76,6 +76,10 @@ final class RoundEngine {
     @ObservationIgnored private var bluffTask: Task<Void, Never>?
     /// 撮影モードで見せる献上量（メモリは確保しない）
     @ObservationIgnored private var demoDonatedBytes: UInt64?
+    /// inactive で離したとみなしたラウンドか。続けてバックグラウンドに移ったら無効にする（ホームに戻るだけで確定できる抜け道をなくすため）
+    @ObservationIgnored private var releasedByInactive = false
+    /// 解放の途中に届いた無効の理由。結果を出すときに無効にする
+    @ObservationIgnored private var pendingVoid: RoundOutcome.VoidReason?
 
     init(
         client: Client = .allocateCorp,
@@ -133,6 +137,8 @@ final class RoundEngine {
         hintStage = .none
         bluff = .none
         stoppedAtSafetyLine = false
+        releasedByInactive = false
+        pendingVoid = nil
         phase = .donating
 
         let worker = DonationWorker(
@@ -155,7 +161,14 @@ final class RoundEngine {
         guard phase == .donating else {
             return
         }
+        releasedByInactive = reason == .inactive
         finish(.delivered)
+    }
+
+    /// 画面が前面に戻った（inactive のあと、バックグラウンドに移らずに戻ったときは、そのまま納品で確定する）
+    func sceneBecameActive() {
+        releasedByInactive = false
+        refreshBudget()
     }
 
     /// OS からメモリ警告が届いた。監査が入ったとしてラウンドを止める（納品扱い）
@@ -182,6 +195,20 @@ final class RoundEngine {
         switch phase {
         case .donating:
             finish(.voided(reason))
+        case .settling:
+            // inactive で離した直後にバックグラウンドへ移ったときなど。解放はそのまま続け、結果を無効にする
+            pendingVoid = reason
+        case let .result(outcome) where releasedByInactive && reason == .background:
+            releasedByInactive = false
+            phase = .result(
+                RoundOutcome(
+                    kind: .voided(reason),
+                    plan: outcome.plan,
+                    budgetBytes: outcome.budgetBytes,
+                    donatedBytes: outcome.donatedBytes,
+                    stoppedAtSafetyLine: outcome.stoppedAtSafetyLine
+                )
+            )
         case .ready where reason == .thermal:
             refreshBudget()
         default:
@@ -317,11 +344,15 @@ final class RoundEngine {
             let donated = allocator.allocatedBytes
             // 離したのと同時に回収ラインを越えていたら、回収にする（比べるのは離した瞬間の量）
             let crossedLine = Double(donated) > plan.collectionLine * Double(budget)
-            let kind: RoundOutcome.Kind = switch kind {
+            var kind: RoundOutcome.Kind = switch kind {
             case .voided:
                 kind
             default:
                 crossedLine ? .collected : kind
+            }
+            if let pendingVoid {
+                kind = .voided(pendingVoid)
+                self.pendingVoid = nil
             }
             let duration = await Task.detached(priority: .userInitiated) {
                 allocator.releaseAll()

@@ -48,7 +48,7 @@ struct RoundScreen: View {
             case .background:
                 engine.void(.background)
             case .active:
-                engine.refreshBudget()
+                engine.sceneBecameActive()
             @unknown default:
                 break
             }
