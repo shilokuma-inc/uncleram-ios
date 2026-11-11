@@ -110,7 +110,9 @@ final class RoundEventMonitor {
     /// スペースキーの長押しで献上する（キーの繰り返しは無視する）
     private func startKeyMonitor() {
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .keyUp]) { [weak self] event in
-            guard event.keyCode == 49, event.modifierFlags.isDisjoint(with: .deviceIndependentFlagsMask) else {
+            // 修飾キーつきのスペースでは始めない。離すほうは、途中で修飾キーを押していても必ず止める
+            guard event.keyCode == 49,
+                  event.type == .keyUp || event.modifierFlags.isDisjoint(with: .deviceIndependentFlagsMask) else {
                 return event
             }
             MainActor.assumeIsolated {
