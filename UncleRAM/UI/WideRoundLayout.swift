@@ -159,7 +159,9 @@ struct WideRoundLayout: View {
 
     #if os(macOS)
     private var holdTitle: LocalizedStringKey { "スペースを長押し" }
-    private var budgetNote: LocalizedStringKey? { "（使用可能メモリの 60%）" }
+    private var budgetNote: LocalizedStringKey? {
+        HostMemoryProbe.isCapped(budget: engine.budgetBytes) ? "（搭載メモリの 50% か 32GB の上限）" : "（使用可能メモリの 60%）"
+    }
     #else
     private var holdTitle: LocalizedStringKey { "長押しで献上" }
     private var budgetNote: LocalizedStringKey? { nil }

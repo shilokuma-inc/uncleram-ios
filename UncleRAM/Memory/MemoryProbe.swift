@@ -31,6 +31,16 @@ nonisolated struct HostMemoryProbe: MemoryProbe {
     static let physicalMemoryRatioLimit = 0.50
     static let absoluteLimit: UInt64 = 32 * 1024 * 1024 * 1024
 
+    /// 搭載メモリの 50% と 32GB のうち、小さい方の上限
+    static var budgetCap: UInt64 {
+        min(UInt64(Double(ProcessInfo.processInfo.physicalMemory) * physicalMemoryRatioLimit), absoluteLimit)
+    }
+
+    /// 枠が上限で頭打ちになっているか（画面の注記を「使用可能メモリの 60%」から変える）
+    static func isCapped(budget: UInt64) -> Bool {
+        budget + Allocator.chunkSize >= budgetCap
+    }
+
     func budgetBytes() -> UInt64 {
         let usable = Double(HostMemory.statistics()?.usableBytes ?? 0) * Self.budgetRatio
         let physical = Double(ProcessInfo.processInfo.physicalMemory) * Self.physicalMemoryRatioLimit
