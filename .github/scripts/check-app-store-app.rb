@@ -6,7 +6,7 @@
 # アプリが無い場合は「新規アプリ」画面で入力する値を表示して、終了コード 1 で終わる。
 #
 # App Store Connect でのアプリ作成は API で行えないため、作成そのものは Web 画面で行う。
-# Bundle ID の登録は Export 時に xcodebuild（-allowProvisioningUpdates）が自動で行う。
+# Bundle ID の登録は、_archive.yml の bundle-id ジョブ（ensure-bundle-id.rb）が archive の前に行う。
 #
 # 使い方（環境変数で渡す）:
 #   BUNDLE_ID=jp.shilokuma.MyApp APP_NAME=MyApp \
@@ -44,7 +44,7 @@ guide = <<~MARKDOWN
 
   | 項目 | 入力する値 |
   | --- | --- |
-  | プラットフォーム | iOS |
+  | プラットフォーム | iOS・macOS（2 つともチェックする） |
   | 名前 | #{app_name}（App Store 全体で使用済みの名前は使えません。その場合は別の名前にします） |
   | プライマリ言語 | 日本語 |
   | バンドル ID | #{bundle_id} |
@@ -52,7 +52,7 @@ guide = <<~MARKDOWN
   | ユーザアクセス | フルアクセス |
 
   - SKU はユーザーには見えない社内用の ID で、後から変更できません。迷わないよう Bundle ID と同じ値にしています
-  - バンドル ID の候補に出てこない場合は、Developer Portal への登録がまだです。このワークフローの Export が一度成功すると登録されます
+  - バンドル ID の候補に出てこない場合は、Developer Portal への登録がまだです。このワークフローの最初のジョブ（bundle-id）が登録するので、その Job Summary を見てください
 MARKDOWN
 
 puts guide

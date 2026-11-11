@@ -120,6 +120,13 @@ App Store Connect でのアプリ作成だけは API で行えないため、Web
 
 SKU は Bundle ID と同じ値にします。SKU はユーザーには見えない社内用の ID で、後から変更できないため、迷わないようにルールを固定しています。
 
+**このアプリ（Uncle RAM）の Mac 版について**
+
+- iOS と macOS は 1 つの App ID（`UNIVERSAL`）と 1 つの App Store Connect のアプリを使います（ユニバーサル購入）。Archive / Upload の最初のジョブ（`bundle-id`、ubuntu）が [.github/scripts/ensure-bundle-id.rb](.github/scripts/ensure-bundle-id.rb) で App ID を登録します
+- アプリを作るときに iOS と macOS の両方にチェックを入れます。後から足すときは、アプリの画面のサイドバーのプラットフォームの横の「＋」から macOS を追加します
+- macOS のプラットフォームが無いうちは、Upload は iOS だけを上げ、macOS は手順を Job Summary に出して飛ばします（失敗にはしません。[.github/scripts/check-app-store-platform.rb](.github/scripts/check-app-store-platform.rb)）
+- macOS はアドホック署名で archive して、App Sandbox の entitlement を残したまま pkg に Export します。Export した pkg に App Sandbox が残ったかを、アップロードの前に確かめます
+
 #### TestFlight の内部テスター
 
 Upload ワークフローは、アップロードの前に TestFlight の内部テストグループ「Internal Testers」を作り、Secret `TESTFLIGHT_INTERNAL_TESTERS` のメールアドレスを内部テスターに追加します（[.github/scripts/ensure-internal-testers.rb](.github/scripts/ensure-internal-testers.rb)）。グループは「すべてのビルドへのアクセス」を有効にして作るため、以降のビルドは処理が終わりしだい自動で配信されます。2 回目以降の Upload では確認だけで何もしません。
@@ -138,7 +145,7 @@ Upload ワークフローは、アップロードの前に TestFlight の内部�
 
 ### 6. ブランチ運用と CI
 
-| ブランチ | Build（ビルド + テスト + SwiftLint） | Archive（IPA Export） | Upload（App Store Connect） |
+| ブランチ | Build（ビルド + テスト + SwiftLint） | Archive（Export。iOS は IPA、macOS は pkg） | Upload（App Store Connect。iOS → macOS） |
 |---|:-:|:-:|:-:|
 | `main` | ✅ | ✅ | |
 | `develop` | ✅ | | ✅ |
@@ -147,7 +154,9 @@ Upload ワークフローは、アップロードの前に TestFlight の内部�
 | Pull Request の作成時（opened / reopened / ready_for_review） | ✅ | | |
 | Fork からの Pull Request | ✅ | | |
 
-- Upload は Archive → IPA Export を含むため、`develop` / `release/**` では Archive を別途実行しません
+- Upload は Archive → Export を含むため、`develop` / `release/**` では Archive を別途実行しません
+- Build は 1 つのジョブで iOS と macOS をビルドします。作業ブランチへの push では Simulator を起動せず、iOS はビルドだけにして、Unit テストを macOS で実行します（アドホック署名のため、テストのときだけ App Sandbox を無効にします）
+- Archive / Upload は iOS → macOS の順に 1 つずつ流します（macOS ランナーの同時実行枠を 1 つしか使わないため）。macOS だけを止めたいときは、リポジトリ変数 `ENABLE_MACOS_DELIVERY=false` を設定します
 - Archive / Upload は Actions タブから手動でも実行できます（Run workflow）。作業ブランチを TestFlight で確認したいときは、Upload を手動実行してそのブランチを選びます
 - リポジトリ変数（Settings → Secrets and variables → Actions → Variables）に `ENABLE_DELIVERY=false` を設定すると Upload をスキップします（Archive は App Store Connect にアプリが無くても通るため止めません）。テンプレートリポジトリ自身はこの設定でアップロードを止めています。テンプレートから作成したリポジトリには引き継がれないため、何もしなければ従来どおり実行されます
 - ドキュメントだけの変更（`**/*.md`、`docs/**`）では Build を実行しません。Upload（`develop` / `release/**` への push）と Archive（`main` への push）は、ドキュメントだけの変更でも実行します
