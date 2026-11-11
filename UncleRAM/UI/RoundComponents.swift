@@ -291,12 +291,16 @@ struct Airship: View {
     }
 }
 
-/// 警告（3 段階目）の画面のノイズ。インクがかすれたような横の帯を走らせる（OS の画面には似せない）
+/// 警告（3 段階目）の画面のノイズ。インクがかすれたような横の帯を走らせる（OS の画面には似せない）。
+/// 「視差効果を減らす」が有効なときは、動かさずに紙の汚れのように止めて見せる（docs/SPEC.md「アクセシビリティ」）
 struct InkNoise: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30)) { timeline in
+        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: reduceMotion)) { timeline in
             Canvas { context, size in
-                var generator = SplitMix64(seed: UInt64(timeline.date.timeIntervalSinceReferenceDate * 30))
+                let frame = reduceMotion ? 0 : UInt64(timeline.date.timeIntervalSinceReferenceDate * 30)
+                var generator = SplitMix64(seed: frame)
                 for _ in 0..<14 {
                     let y = generator.uniform(0...Double(size.height))
                     let height = generator.uniform(1...7)
