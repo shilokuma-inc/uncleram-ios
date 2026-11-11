@@ -55,6 +55,8 @@ final class RoundEngine {
     private(set) var phase: Phase = .ready
     /// 枠（待機中は今の値、献上中はラウンド開始時の値）
     private(set) var budgetBytes: UInt64 = 0
+    /// 実際に効く安全ライン（枠に対する割合）。枠が小さく、残す量（200MB）が先に効く端末では 85% より手前になる
+    private(set) var safetyLineFill = SafetyLine.budgetRatio
     private(set) var hintStage: RoundPlan.HintStage = .none
     private(set) var bluff: Bluff = .none
     /// 直前のラウンドで、全解放にかかった秒数
@@ -106,6 +108,7 @@ final class RoundEngine {
             return
         }
         budgetBytes = probe.budgetBytes()
+        safetyLineFill = SafetyLine(budgetBytes: budgetBytes).effectiveLine(available: probe.availableBytes(allocatedByRound: 0))
         if thermalState().rawValue >= ProcessInfo.ThermalState.serious.rawValue {
             phase = .unavailable(.thermal)
         } else if !SafetyLine(budgetBytes: budgetBytes).isPlayable {
@@ -125,8 +128,7 @@ final class RoundEngine {
             return
         }
         let safety = SafetyLine(budgetBytes: budgetBytes)
-        let effectiveLine = safety.effectiveLine(available: probe.availableBytes(allocatedByRound: 0))
-        let plan = RoundPlan.make(client: client, safetyLine: effectiveLine, random: &random)
+        let plan = RoundPlan.make(client: client, safetyLine: safetyLineFill, random: &random)
         self.plan = plan
         hintStage = .none
         bluff = .none
