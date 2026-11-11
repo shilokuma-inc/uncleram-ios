@@ -1,14 +1,15 @@
-# UncleRAM
+# Uncle RAM
 
-iOS Application Template (SwiftUI)
+端末の本物のメモリを「献上」する、長押しワンボタンの押し引きゲームです（iPhone・iPad・Mac）。
+長押ししている間だけメモリを確保し、離すと「納品」になります。隠れた「回収ライン」を越えると、そのラウンドの献上分はすべて失われます。
+安全ラインで必ず止めるので、OS による強制終了は起こしません。
 
-iOS アプリのリポジトリを新規作成するときの GitHub テンプレートリポジトリです。
-SwiftUI のプロジェクト一式と、ビルド・テスト・Archive・TestFlight 配信までの GitHub Actions ワークフローを含みます。
+[template-app-ios](https://github.com/shilokuma-inc/template-app-ios) から作成しました。以下の「テンプレートの使い方」以降は、テンプレートの説明をそのまま残しています。
 
 ## Environment
 
 - Xcode 26.6
-- iOS 17.0 以上
+- iOS・iPadOS 18.0 以上、macOS 15.0 以上（SwiftUI のマルチプラットフォームの 1 ターゲット。Mac は Mac Catalyst ではなく macOS そのもの）
 - Swift 6（Swift 6 言語モード / Strict Concurrency）
 - SwiftUI / Swift Testing / XCTest（UI テスト）
 - SwiftLint 0.65.1（Build Tool Plugin。バイナリだけを配布する [SwiftLintPlugins](https://github.com/SimplyDanny/SwiftLintPlugins) 経由）
