@@ -64,7 +64,11 @@ struct MemorySafetyTests {
         #expect(engine.phase == .ready)
         engine.beginHold()
         #expect(engine.phase == .donating)
-        try await Task.sleep(for: .milliseconds(450))
+        // 混んだランナーでも揺らがないよう、時間を決め打ちせずに献上量が増えるまで待つ（最大 3 秒）
+        let deadline = ContinuousClock.now + .seconds(3)
+        while engine.donatedBytes == 0, ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(20))
+        }
         engine.endHold(.released)
         let outcome = try #require(await engine.waitForResult())
         #expect(outcome.kind == .delivered)
