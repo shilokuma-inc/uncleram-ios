@@ -73,7 +73,7 @@ python3 Tools/sim.py
 # 試作の計測（ラウンドを自動で続けて、解放の時間・落ちたフレーム・使用量・スワップを JSON に残す）
 <アプリ> -bench 100 -bench-fill full   # sparse にすると、ページごとに少しだけ書く方式
 # 撮影モード（メモリを確保せずに、ラウンドの場面を表示する。PR のスクリーンショット用）
-<アプリ> -screenshot-demo -screenshot-scene home|sign|approach|warning|delivered|collected
+<アプリ> -screenshot-demo -screenshot-scene approach   # ほかの場面: home・sign・warning・delivered・collected
 ```
 
 - Simulator の `os_proc_available_memory()` は実際の値を返さないので、仮の枠（例: 2GB）で動かす（SPEC.md「技術仕様」）
