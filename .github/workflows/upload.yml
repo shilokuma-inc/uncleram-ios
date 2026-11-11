@@ -1,6 +1,6 @@
 name: Upload
 
-# develop / release/** への push で Archive → IPA Export → App Store Connect へアップロードする。
+# develop / release/** への push で Archive → Export → App Store Connect へアップロードする（iOS・macOS）。
 # 作業ブランチを TestFlight で確認したいときは、手動実行（workflow_dispatch）でそのブランチを選ぶ。
 # 作業ブランチの push ごとに上げると、App Store Connect の 24 時間あたりのアップロード上限に当たるため自動では上げない。
 on:
@@ -20,11 +20,29 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # iOS → macOS の順に 1 つずつ流す。macOS ランナーの同時実行枠（Organization 全体で 5）を 1 つしか使わないため。
+  # iOS が失敗しても macOS は流す（!cancelled()）。
+  # App Store Connect のアプリに macOS のプラットフォームが無いうちは、_archive.yml が確かめて archive を飛ばす（失敗にしない）
   upload:
     # テンプレートリポジトリ自身など、App Store Connect にアプリが無いリポジトリではリポジトリ変数 ENABLE_DELIVERY=false でスキップする。
-    # Archive（main で IPA Export まで確認する）はアプリが無くても通るので止めない
+    # Archive（main で Export まで確認する）はアプリが無くても通るので止めない
     if: vars.ENABLE_DELIVERY != 'false'
+    permissions:
+      contents: read
     uses: ./.github/workflows/_archive.yml
     with:
+      platform: iOS
+      upload: true
+    secrets: inherit
+
+  upload-macos:
+    # macOS だけを止めたいときはリポジトリ変数 ENABLE_MACOS_DELIVERY=false にする
+    needs: upload
+    if: ${{ !cancelled() && vars.ENABLE_DELIVERY != 'false' && vars.ENABLE_MACOS_DELIVERY != 'false' }}
+    permissions:
+      contents: read
+    uses: ./.github/workflows/_archive.yml
+    with:
+      platform: macOS
       upload: true
     secrets: inherit
