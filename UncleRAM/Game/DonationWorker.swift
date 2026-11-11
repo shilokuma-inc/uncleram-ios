@@ -107,6 +107,8 @@ nonisolated final class DonationWorker: Sendable {
             pendingBytes -= Double(count) * chunkSize
 
             let batch = allocator.allocate(count: count, safety: safety, probe: probe)
+            // 同じ確保で警告と回収ラインを両方越えたときも、回収の前にヒントを出しておく
+            reportHints(fill: Double(allocator.allocatedBytes) / budget, stage: &stage, bluffSent: &bluffSent)
             // 回収ラインは必ず安全ラインより手前にあるので、越えるまで確保してから回収にする（献上量はラインの先になる）
             if Double(allocator.allocatedBytes) > lineBytes {
                 onEvent(.collected)
@@ -116,18 +118,17 @@ nonisolated final class DonationWorker: Sendable {
                 onEvent(.stoppedAtSafetyLine)
                 break
             }
-
-            reportHints(fill: Double(allocator.allocatedBytes) / budget, stage: &stage, bluffSent: &bluffSent)
         }
         markFinished()
     }
 
-    /// ヒントの段階が上がったら知らせる。はったりの位置に来たら、本物の気配がまだ出ていなければ知らせる
+    /// ヒントの段階が上がったら知らせる（1 回の確保で 2 段階を越えても、1 → 2 → 3 の順にすべて知らせる）。
+    /// はったりの位置に来たら、本物の気配がまだ出ていなければ知らせる
     private func reportHints(fill: Double, stage: inout RoundPlan.HintStage, bluffSent: inout Bool) {
         let newStage = plan.hintStage(at: fill)
-        if newStage != stage {
-            stage = newStage
-            onEvent(.hintStageChanged(newStage))
+        while stage < newStage, let next = RoundPlan.HintStage(rawValue: stage.rawValue + 1) {
+            stage = next
+            onEvent(.hintStageChanged(next))
         }
         if !bluffSent, let bluffAt = plan.bluffAt, fill >= bluffAt {
             bluffSent = true
