@@ -97,6 +97,58 @@ struct MemorySafetyTests {
         #expect(engine.allocator.allocatedBytes == 0)
     }
 
+    private func donatingEngine(seed: UInt64) async throws -> RoundEngine {
+        let engine = RoundEngine(
+            allocator: Allocator(fillMode: .sparse),
+            probe: SimulatedMemoryProbe(totalBytes: 640 * Self.megabyte),
+            random: SplitMix64(seed: seed),
+            thermalState: { .nominal }
+        )
+        engine.beginHold()
+        let deadline = ContinuousClock.now + .seconds(3)
+        while engine.donatedBytes == 0, ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        return engine
+    }
+
+    /// inactive で離したあと、続けてバックグラウンドに移ったら無効になる（ホームに戻るだけで確定できる抜け道をなくす）
+    @Test
+    func inactiveThenBackgroundVoidsRound() async throws {
+        let duringSettling = try await donatingEngine(seed: 3)
+        duringSettling.endHold(.inactive)
+        duringSettling.void(.background)
+        #expect(try #require(await duringSettling.waitForResult()).kind == .voided(.background))
+
+        let afterResult = try await donatingEngine(seed: 4)
+        afterResult.endHold(.inactive)
+        #expect(try #require(await afterResult.waitForResult()).kind == .delivered)
+        afterResult.void(.background)
+        #expect(try #require(await afterResult.waitForResult()).kind == .voided(.background))
+        #expect(afterResult.allocator.allocatedBytes == 0)
+    }
+
+    /// inactive のあと前面に戻ったら（コントロールセンターなど）、納品のまま確定する
+    @Test
+    func inactiveThenActiveKeepsDelivery() async throws {
+        let engine = try await donatingEngine(seed: 5)
+        engine.endHold(.inactive)
+        #expect(try #require(await engine.waitForResult()).kind == .delivered)
+        engine.sceneBecameActive()
+        engine.void(.background)
+        #expect(try #require(await engine.waitForResult()).kind == .delivered)
+    }
+
+    /// 枠が小さく、残す量（200MB）が先に効く端末では、画面の安全ラインも 85% より手前になる
+    @Test
+    func effectiveSafetyLineIsShownForSmallBudget() {
+        let engine = RoundEngine(
+            probe: SimulatedMemoryProbe(totalBytes: 640 * Self.megabyte),
+            thermalState: { .nominal }
+        )
+        #expect(abs(engine.safetyLineFill - 440.0 / 640.0) < 1e-9)
+    }
+
     /// 発熱が serious 以上なら始められない
     @Test
     func seriousThermalStateBlocksRound() {
