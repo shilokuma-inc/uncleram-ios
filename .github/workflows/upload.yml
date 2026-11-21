@@ -25,7 +25,7 @@ jobs:
   # App Store Connect のアプリに macOS のプラットフォームが無いうちは、_archive.yml が確かめて archive を飛ばす（失敗にしない）
   upload:
     # テンプレートリポジトリ自身など、App Store Connect にアプリが無いリポジトリではリポジトリ変数 ENABLE_DELIVERY=false でスキップする。
-    # Archive（main で Export まで確認する）はアプリが無くても通るので止めない
+    # Archive（手動実行。Export まで確認する）はアプリが無くても通るので止めない
     if: vars.ENABLE_DELIVERY != 'false'
     permissions:
       contents: read
