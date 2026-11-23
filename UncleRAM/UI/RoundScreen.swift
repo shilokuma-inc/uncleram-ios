@@ -40,7 +40,11 @@ struct RoundScreen: View {
             monitor.start()
             bench.startFromLaunchArgumentsIfNeeded()
         }
-        .onDisappear { monitor.stop() }
+        .onDisappear {
+            // 画面が消えたら（Mac でウィンドウを閉じたときなど）、計測も止める。止めないと、画面も監視も無いまま確保を続けてしまう
+            bench.cancel()
+            monitor.stop()
+        }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
             case .inactive:
