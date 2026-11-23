@@ -223,14 +223,13 @@ final class BenchRunner {
             logger.error("ラウンド \(index) で献上を始められません: \(String(describing: self.engine.phase))")
             return nil
         }
-        var peakFootprint = baseline
+        // 使用量のピークと、そのときの献上量（書き込みの途中でないときに一緒に量れたものだけ）
+        var peak: (footprint: UInt64, donated: UInt64)?
         var peakCompressed = ProcessMemory.compressedBytes()
-        var peakDonated: UInt64 = 0
         while engine.phase == .donating, engine.donatedFill < target, !Task.isCancelled {
             try? await Task.sleep(for: .milliseconds(50))
-            if let footprint = ProcessMemory.footprintBytes(), footprint > (peakFootprint ?? 0) {
-                peakFootprint = footprint
-                peakDonated = engine.donatedBytes
+            if let sample = Self.consistentSample(engine), sample.footprint > (peak?.footprint ?? 0) {
+                peak = sample
             }
             Self.raise(&peakCompressed, to: ProcessMemory.compressedBytes())
             Self.raise(&swapMax, to: ProcessMemory.swapUsedBytes())
@@ -256,13 +255,15 @@ final class BenchRunner {
             donatedMegabytes: Self.megabytes(outcome?.donatedBytes ?? 0),
             releaseMilliseconds: (engine.lastReleaseDuration ?? 0) * 1000,
             unmapMilliseconds: (engine.lastUnmapDuration ?? 0) * 1000,
-            peakFootprintMegabytes: peakFootprint.map(Self.megabytes),
+            peakFootprintMegabytes: (peak?.footprint ?? baseline).map(Self.megabytes),
             footprintAfterReleaseMegabytes: ProcessMemory.footprintBytes().map(Self.megabytes),
-            footprintPerDonated: Self.ratio(
-                peak: peakFootprint,
-                baseline: baseline,
-                donated: peakDonated > 0 ? peakDonated : (outcome?.donatedBytes ?? 0)
-            ),
+            footprintPerDonated: peak.flatMap { sample in
+                Self.ratio(
+                    peak: sample.footprint,
+                    baseline: baseline,
+                    donated: sample.donated > 0 ? sample.donated : (outcome?.donatedBytes ?? 0)
+                )
+            },
             peakCompressedMegabytes: peakCompressed.map(Self.megabytes),
             frames: frameMonitor.stats,
             releaseFrames: frameMonitor.releaseStats
@@ -375,6 +376,20 @@ extension BenchRunner {
             return 0
         }
         return (Double(peak - baseline) / Double(donated) * 1000).rounded() / 1000
+    }
+
+    /// 使用量と献上量を、書き込みの途中でないときに一緒に量る。
+    /// 書き込みの途中だと、書いた分が使用量にだけ表れて献上量にはまだ数えられていないので、比率が大きく出る。そのときは使わない
+    private static func consistentSample(_ engine: RoundEngine) -> (footprint: UInt64, donated: UInt64)? {
+        let sequence = engine.allocator.fillSequenceNumber
+        guard sequence.isMultiple(of: 2), let footprint = ProcessMemory.footprintBytes() else {
+            return nil
+        }
+        let donated = engine.donatedBytes
+        guard engine.allocator.fillSequenceNumber == sequence else {
+            return nil
+        }
+        return (footprint, donated)
     }
 
     /// ラウンドの終わりが決まって、確保を止めて解放する段階に入ったか

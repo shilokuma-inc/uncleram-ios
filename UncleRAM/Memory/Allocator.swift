@@ -29,6 +29,8 @@ nonisolated final class Allocator: Sendable {
     /// 確保したチャンクの先頭アドレス
     private let chunks = Mutex<[UInt]>([])
     private let allocated = Atomic<UInt64>(0)
+    /// 書き込みの数え。書き込みの間だけ奇数になる（計測で、使用量と献上量を同じ確保の状態で量るのに使う）
+    private let fillSequence = Atomic<UInt64>(0)
     private let mode: Mutex<FillMode>
 
     init(fillMode: FillMode = .full) {
@@ -44,6 +46,11 @@ nonisolated final class Allocator: Sendable {
     /// 確保して書き込み済みの量
     var allocatedBytes: UInt64 {
         allocated.load(ordering: .acquiring)
+    }
+
+    /// 書き込みの数え。奇数なら書き込みの途中（書いた分が使用量に表れ始めていても、まだ献上量に数えていない）
+    var fillSequenceNumber: UInt64 {
+        fillSequence.load(ordering: .sequentiallyConsistent)
     }
 
     /// 16MB を最大 count 個確保する。1 個ごとに安全ラインを確かめ、当たったらそこで止める
@@ -73,9 +80,11 @@ nonisolated final class Allocator: Sendable {
             }
             fresh.append(UInt(bitPattern: address))
         }
+        fillSequence.add(1, ordering: .sequentiallyConsistent)
         Self.fill(fresh, mode: fillMode)
         chunks.withLock { $0.append(contentsOf: fresh) }
         allocated.add(UInt64(fresh.count) * chunkSize, ordering: .releasing)
+        fillSequence.add(1, ordering: .sequentiallyConsistent)
         batch.allocated = fresh.count
         return batch
     }
