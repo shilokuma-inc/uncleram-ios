@@ -27,6 +27,8 @@ struct BenchButton: View {
             .menuStyle(.button)
             .buttonStyle(.plain)
             .fixedSize()
+            // 献上中・解放中は始めない（通常のラウンドと同時に動かさないため）
+            .disabled(!bench.canStart)
         }
     }
 }

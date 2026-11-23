@@ -65,6 +65,9 @@ final class RoundEngine {
     @ObservationIgnored private(set) var lastUnmapDuration: TimeInterval?
     /// このラウンドの条件（献上中と結果のときだけ）
     private(set) var plan: RoundPlan?
+    /// 計測（BenchRunner）がラウンドを動かしているか。この間は人の長押し（指・クリック・スペースキー）を受け付けない。
+    /// inactive・ウィンドウが前面でなくなった・メモリ警告・発熱・バックグラウンドは、計測中でもふだんどおり効く
+    var isAutomated = false
     /// 起動してから届いたメモリ警告・逼迫の数（計測用）
     @ObservationIgnored private(set) var memoryWarningCount = 0
 

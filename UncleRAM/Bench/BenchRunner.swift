@@ -111,11 +111,26 @@ final class BenchRunner {
         start(rounds: rounds, fillMode: fillMode)
     }
 
-    func start(rounds: Int = 100, fillMode: Allocator.FillMode = .full) {
+    /// 計測を始められるか。通常のラウンドと同時に動かさないよう、献上中・解放中・遊べないときは始めない
+    var canStart: Bool {
         guard !isRunning else {
+            return false
+        }
+        switch engine.phase {
+        case .ready, .result:
+            return true
+        case .donating, .settling, .unavailable:
+            return false
+        }
+    }
+
+    func start(rounds: Int = 100, fillMode: Allocator.FillMode = .full) {
+        guard canStart else {
+            logger.error("いまは計測を始められません: \(String(describing: self.engine.phase))")
             return
         }
         isRunning = true
+        engine.isAutomated = true
         progress = 0
         plannedRounds = rounds
         savedURL = nil
@@ -193,6 +208,7 @@ final class BenchRunner {
             engine.reset()
         }
         Self.setIdleTimerDisabled(false)
+        engine.isAutomated = false
         isRunning = false
     }
 

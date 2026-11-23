@@ -132,11 +132,14 @@ struct HoldButton: View {
                     }
                 }
             )
-            .disabled(!(engine.phase == .ready || engine.phase == .donating))
+            .disabled(engine.isAutomated || !(engine.phase == .ready || engine.phase == .donating))
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(Text("献上する"))
             .accessibilityAddTraits(.isButton)
             .accessibilityAction {
+                guard !engine.isAutomated else {
+                    return
+                }
                 // VoiceOver はダブルタップで開始、もう一度で納品（タップ操作と同じ。docs/SPEC.md「アクセシビリティ」）
                 if engine.phase == .donating {
                     engine.endHold(.released)

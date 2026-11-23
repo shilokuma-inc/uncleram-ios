@@ -116,7 +116,8 @@ final class RoundEventMonitor {
                 return event
             }
             MainActor.assumeIsolated {
-                guard let self else {
+                // 計測中は、スペースキーで計測のラウンドを始めたり止めたりしない
+                guard let self, !self.engine.isAutomated else {
                     return
                 }
                 if event.type == .keyDown {
