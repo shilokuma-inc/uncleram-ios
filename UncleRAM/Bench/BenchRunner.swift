@@ -188,7 +188,7 @@ final class BenchRunner {
                 break
             }
             // 離す位置を散らす（早いもの・回収ラインを越えるもの・安全ラインまで押すもの）
-            // 中止したラウンドは記録しない（途中で止めた量が、納品として数えられてしまうため）
+            // 中止したラウンドと、始められなかったラウンドは記録しない（途中で止めた量や 0 が、納品として数えられてしまうため）
             guard let record = await playRound(index: index, target: random.uniform(0.2...0.86), swapMax: &swapMax) else {
                 break
             }
@@ -217,6 +217,12 @@ final class BenchRunner {
         let baseline = ProcessMemory.footprintBytes()
         frameMonitor.start()
         engine.beginHold()
+        // beginHold は枠と発熱を量り直すので、ここで始められないこともある。そのときは記録せずに計測を終える
+        guard engine.phase == .donating else {
+            frameMonitor.stop()
+            logger.error("ラウンド \(index) で献上を始められません: \(String(describing: self.engine.phase))")
+            return nil
+        }
         var peakFootprint = baseline
         var peakCompressed = ProcessMemory.compressedBytes()
         var peakDonated: UInt64 = 0
