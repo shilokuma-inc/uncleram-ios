@@ -247,6 +247,10 @@ final class BenchRunner {
         // 結果の画面に切り替わる 1 フレーム分も含めて数える
         try? await Task.sleep(for: .milliseconds(100))
         frameMonitor.stop()
+        // 確保を止めて解放する間にスワップが増えることもあるので、結果が出た後にも量る（最後のラウンドの分を取りこぼさない）
+        if let swap = ProcessMemory.swapUsedBytes(), swap > (swapMax ?? 0) {
+            swapMax = swap
+        }
         guard !cancelled else {
             return nil
         }
