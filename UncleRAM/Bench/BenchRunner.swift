@@ -26,7 +26,10 @@ final class BenchRunner {
         var budgetMegabytes: Double
         var targetFill: Double
         var donatedMegabytes: Double
+        /// 終わりが決まってから全解放が終わるまで（確保を止めるのを待つ時間を含む。合格条件「解放 200ms 以内」の判定に使う）
         var releaseMilliseconds: Double
+        /// そのうち、munmap で全解放するのにかかった時間
+        var unmapMilliseconds: Double
         var peakFootprintMegabytes: Double?
         var footprintAfterReleaseMegabytes: Double?
         /// ピークのときの、使用量の増えた分 ÷ 献上量（1 に近いほど、書いた分が使用量に計上されている）
@@ -232,6 +235,7 @@ final class BenchRunner {
             targetFill: target,
             donatedMegabytes: Self.megabytes(outcome?.donatedBytes ?? 0),
             releaseMilliseconds: (engine.lastReleaseDuration ?? 0) * 1000,
+            unmapMilliseconds: (engine.lastUnmapDuration ?? 0) * 1000,
             peakFootprintMegabytes: peakFootprint.map(Self.megabytes),
             footprintAfterReleaseMegabytes: ProcessMemory.footprintBytes().map(Self.megabytes),
             footprintPerDonated: Self.ratio(

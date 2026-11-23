@@ -59,8 +59,10 @@ final class RoundEngine {
     private(set) var safetyLineFill = SafetyLine.budgetRatio
     private(set) var hintStage: RoundPlan.HintStage = .none
     private(set) var bluff: Bluff = .none
-    /// 直前のラウンドで、全解放にかかった秒数
+    /// 直前のラウンドで、終わりが決まってから全解放が終わるまでの秒数（確保を止めるのを待つ時間を含む。合格条件「解放 200ms 以内」はこの値で見る）
     private(set) var lastReleaseDuration: TimeInterval?
+    /// そのうち、munmap で全解放するのにかかった秒数
+    @ObservationIgnored private(set) var lastUnmapDuration: TimeInterval?
     /// このラウンドの条件（献上中と結果のときだけ）
     private(set) var plan: RoundPlan?
     /// 起動してから届いたメモリ警告・逼迫の数（計測用）
@@ -336,6 +338,7 @@ final class RoundEngine {
         }
         // 献上量は、終わりが決まった（離した）瞬間の量で確定する。確保を止めるのを待つ間に書き終えたチャンクは数えず、解放だけする
         let donated = allocator.allocatedBytes
+        let settleStart = ContinuousClock.now
         phase = .settling
         cancelBluff()
         self.worker = nil
@@ -355,10 +358,10 @@ final class RoundEngine {
                 kind = .voided(pendingVoid)
                 self.pendingVoid = nil
             }
-            let duration = await Task.detached(priority: .userInitiated) {
+            lastUnmapDuration = await Task.detached(priority: .userInitiated) {
                 allocator.releaseAll()
             }.value
-            lastReleaseDuration = duration
+            lastReleaseDuration = settleStart.duration(to: .now).seconds
             phase = .result(
                 RoundOutcome(
                     kind: kind,
