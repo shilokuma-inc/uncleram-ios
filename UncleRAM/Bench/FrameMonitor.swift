@@ -46,10 +46,16 @@ final class FrameMonitor: NSObject {
         link.add(to: .main, forMode: .common)
         self.link = link
         #elseif os(macOS)
-        guard let screen = NSScreen.main else {
+        // ウィンドウから作ると、計測中にウィンドウを別の画面へ移しても、その画面の更新に追従する
+        let link: CADisplayLink
+        let app = NSApplication.shared
+        if let window = app.keyWindow ?? app.mainWindow ?? app.windows.first(where: \.isVisible) {
+            link = window.displayLink(target: self, selector: #selector(tick(_:)))
+        } else if let screen = NSScreen.main {
+            link = screen.displayLink(target: self, selector: #selector(tick(_:)))
+        } else {
             return
         }
-        let link = screen.displayLink(target: self, selector: #selector(tick(_:)))
         link.preferredFrameRateRange = CAFrameRateRange(minimum: 60, maximum: 60, preferred: 60)
         link.add(to: .main, forMode: .common)
         self.link = link
