@@ -132,7 +132,7 @@ struct ChairmanPanel: View {
 }
 
 /// 直線（破線の区切りに使う）
-struct Line: Shape {
+nonisolated struct Line: Shape {
     enum Axis {
         case horizontal
         case vertical
