@@ -12,7 +12,7 @@ struct CompactRoundLayout: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: isShort ? 10 : 14) {
+        VStack(alignment: .leading, spacing: isShort ? 8 : 14) {
             header
             Ornament()
             ChairmanPanel(
@@ -106,7 +106,7 @@ struct PriceFooter: View {
     private let price = MacUpgradePrice.current
 
     var body: some View {
-        VStack(alignment: .trailing, spacing: 6) {
+        VStack(alignment: .trailing, spacing: compact ? 3 : 6) {
             TimelineView(.animation(minimumInterval: 0.1, paused: engine.phase != .donating)) { _ in
                 HStack(alignment: .firstTextBaseline) {
                     Text("Mac で増設すると")
@@ -118,19 +118,18 @@ struct PriceFooter: View {
                         .font(Theme.mincho(12))
                 }
             }
-            .padding(.vertical, 6)
+            .padding(.vertical, compact ? 4 : 6)
             .padding(.horizontal, 2)
             .overlay(alignment: .top) { DashedRule() }
             .overlay(alignment: .bottom) { DashedRule() }
-            if !compact {
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text("公式ストアの増設価格 1GB \(price.formattedPricePerGigabyte)\(price.note)")
-                        .foregroundStyle(Theme.subText)
-                    Text(verbatim: price.changeNote)
-                        .foregroundStyle(Theme.red)
-                }
-                .font(Theme.mincho(11, bold: false))
+            // 換算額の根拠（公式ストアの単価・時点・税の扱い）は、低い画面でも必ず出す（docs/SPEC.md「金額の表示」の 1.1.6）
+            VStack(alignment: .trailing, spacing: compact ? 1 : 2) {
+                Text("公式ストアの増設価格 1GB \(price.formattedPricePerGigabyte)\(price.note)")
+                    .foregroundStyle(Theme.subText)
+                Text(verbatim: price.changeNote)
+                    .foregroundStyle(Theme.red)
             }
+            .font(Theme.mincho(compact ? 10 : 11, bold: false))
         }
     }
 }
