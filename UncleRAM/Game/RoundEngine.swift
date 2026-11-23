@@ -233,57 +233,6 @@ final class RoundEngine {
         refreshBudget()
     }
 
-    /// 結果が出るまで待つ（計測とテスト用）
-    func waitForResult() async -> RoundOutcome? {
-        while true {
-            switch phase {
-            case let .result(outcome):
-                return outcome
-            case .ready, .unavailable:
-                return nil
-            case .donating, .settling:
-                try? await Task.sleep(for: .milliseconds(10))
-            }
-        }
-    }
-
-    /// 撮影モード（ScreenshotDemo）の場面を、メモリを確保せずに見せる
-    func showDemo(_ scene: ScreenshotDemo.Scene) {
-        let plan = RoundPlan(isEarlyCollection: false, collectionLine: 0.64, hintThresholds: [0.49, 0.56, 0.62], bluffAt: nil)
-        let budget = budgetBytes
-        func bytes(_ fill: Double) -> UInt64 {
-            UInt64(Double(budget) * fill)
-        }
-        switch scene {
-        case .home:
-            return
-        case .sign, .approach, .warning:
-            let stage: (RoundPlan.HintStage, Double) = switch scene {
-            case .sign: (.sign, 0.52)
-            case .approach: (.approach, 0.58)
-            default: (.warning, 0.63)
-            }
-            self.plan = plan
-            hintStage = stage.0
-            demoDonatedBytes = bytes(stage.1)
-            phase = .donating
-        case .delivered, .collected:
-            let delivered = scene == .delivered
-            let collectedPlan = RoundPlan(isEarlyCollection: false, collectionLine: 0.58, hintThresholds: [0.43, 0.50, 0.56], bluffAt: nil)
-            self.plan = delivered ? plan : collectedPlan
-            lastReleaseDuration = 0.042
-            phase = .result(
-                RoundOutcome(
-                    kind: delivered ? .delivered : .collected,
-                    plan: delivered ? plan : collectedPlan,
-                    budgetBytes: budget,
-                    donatedBytes: bytes(delivered ? 0.62 : 0.61),
-                    stoppedAtSafetyLine: false
-                )
-            )
-        }
-    }
-
     private var isUnavailable: Bool {
         if case .unavailable = phase {
             return true
@@ -372,6 +321,60 @@ final class RoundEngine {
                     budgetBytes: budget,
                     donatedBytes: donated,
                     stoppedAtSafetyLine: stoppedAtSafetyLine
+                )
+            )
+        }
+    }
+}
+
+/// 計測・テストと撮影モードのための操作
+extension RoundEngine {
+    /// 結果が出るまで待つ（計測とテスト用）
+    func waitForResult() async -> RoundOutcome? {
+        while true {
+            switch phase {
+            case let .result(outcome):
+                return outcome
+            case .ready, .unavailable:
+                return nil
+            case .donating, .settling:
+                try? await Task.sleep(for: .milliseconds(10))
+            }
+        }
+    }
+
+    /// 撮影モード（ScreenshotDemo）の場面を、メモリを確保せずに見せる
+    func showDemo(_ scene: ScreenshotDemo.Scene) {
+        let plan = RoundPlan(isEarlyCollection: false, collectionLine: 0.64, hintThresholds: [0.49, 0.56, 0.62], bluffAt: nil)
+        let budget = budgetBytes
+        func bytes(_ fill: Double) -> UInt64 {
+            UInt64(Double(budget) * fill)
+        }
+        switch scene {
+        case .home:
+            return
+        case .sign, .approach, .warning:
+            let stage: (RoundPlan.HintStage, Double) = switch scene {
+            case .sign: (.sign, 0.52)
+            case .approach: (.approach, 0.58)
+            default: (.warning, 0.63)
+            }
+            self.plan = plan
+            hintStage = stage.0
+            demoDonatedBytes = bytes(stage.1)
+            phase = .donating
+        case .delivered, .collected:
+            let delivered = scene == .delivered
+            let collectedPlan = RoundPlan(isEarlyCollection: false, collectionLine: 0.58, hintThresholds: [0.43, 0.50, 0.56], bluffAt: nil)
+            self.plan = delivered ? plan : collectedPlan
+            lastReleaseDuration = 0.042
+            phase = .result(
+                RoundOutcome(
+                    kind: delivered ? .delivered : .collected,
+                    plan: delivered ? plan : collectedPlan,
+                    budgetBytes: budget,
+                    donatedBytes: bytes(delivered ? 0.62 : 0.61),
+                    stoppedAtSafetyLine: false
                 )
             )
         }
