@@ -134,10 +134,13 @@ final class BenchRunner {
         progress = 0
         plannedRounds = rounds
         savedURL = nil
+        // 計測が終わったら、ふだんのラウンドの書き込み方（本番は sparse）に戻す
+        let previousFillMode = engine.allocator.fillMode
         engine.allocator.fillMode = fillMode
         Self.setIdleTimerDisabled(true)
         task = Task { [weak self] in
             await self?.run(rounds: rounds, fillMode: fillMode)
+            self?.engine.allocator.fillMode = previousFillMode
         }
     }
 
