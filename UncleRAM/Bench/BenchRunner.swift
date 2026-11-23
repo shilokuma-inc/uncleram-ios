@@ -215,7 +215,7 @@ final class BenchRunner {
     /// 1 ラウンドを、献上量が target（枠に対する割合）に届くまで押し続けて遊ぶ
     private func playRound(index: Int, target: Double, swapMax: inout UInt64?) async -> RoundRecord? {
         let baseline = ProcessMemory.footprintBytes()
-        frameMonitor.start()
+        frameMonitor.start { [engine] in Self.hasStartedReleasing(engine) }
         engine.beginHold()
         // beginHold は枠と発熱を量り直すので、ここで始められないこともある。そのときは記録せずに計測を終える
         guard engine.phase == .donating else {
@@ -375,6 +375,16 @@ extension BenchRunner {
             return 0
         }
         return (Double(peak - baseline) / Double(donated) * 1000).rounded() / 1000
+    }
+
+    /// ラウンドの終わりが決まって、確保を止めて解放する段階に入ったか
+    private static func hasStartedReleasing(_ engine: RoundEngine) -> Bool {
+        switch engine.phase {
+        case .settling, .result:
+            true
+        case .ready, .donating, .unavailable:
+            false
+        }
     }
 
     /// 量れた値が、今までの最大より大きければ置き換える

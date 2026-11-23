@@ -31,14 +31,17 @@ final class FrameMonitor: NSObject {
     /// 離してから結果が出るまで（確保を止めて、全メモリを解放している間）のフレーム
     private(set) var releaseStats = Stats()
     private var releasing = false
+    /// 解放が始まったか。毎フレーム確かめる（回収ラインや安全ラインで自動で終わったときは、markRelease より先に解放が始まるため）
+    private var isReleasing: (() -> Bool)?
     private var lastTimestamp: CFTimeInterval?
     private var link: CADisplayLink?
 
-    func start() {
+    func start(isReleasing: (() -> Bool)? = nil) {
         stop()
         stats = Stats()
         releaseStats = Stats()
         releasing = false
+        self.isReleasing = isReleasing
         lastTimestamp = nil
         #if os(iOS)
         let link = CADisplayLink(target: self, selector: #selector(tick(_:)))
@@ -76,6 +79,9 @@ final class FrameMonitor: NSObject {
         defer { lastTimestamp = link.timestamp }
         guard let lastTimestamp else {
             return
+        }
+        if !releasing, isReleasing?() == true {
+            releasing = true
         }
         let expected = 1.0 / 60
         let interval = link.timestamp - lastTimestamp
