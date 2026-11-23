@@ -53,6 +53,13 @@ struct MemorySafetyTests {
         #expect(duration < 0.2)
     }
 
+    /// 本番の書き込み方は、ページごとに少しだけ乱数を書く方式（docs/SPEC.md「書き込み方の見直し」）
+    @Test
+    func productionFillModeIsSparse() {
+        #expect(Allocator().fillMode == .sparse)
+        #expect(RoundEngine(thermalState: { .nominal }).allocator.fillMode == .sparse)
+    }
+
     /// 書き込みの数えは、書き込みの間だけ奇数になり、1 回の確保で 2 つ進む（計測で、使用量と献上量を同じ状態で量るため）
     @Test
     func fillSequenceIsEvenOutsideWrites() {
