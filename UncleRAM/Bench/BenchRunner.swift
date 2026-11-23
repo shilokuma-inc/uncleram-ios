@@ -1,0 +1,414 @@
+import Foundation
+import Observation
+import os
+import StoreKit
+#if os(iOS)
+import UIKit
+#endif
+
+/// 試作の合格条件を測る計測。ラウンドを自動で続けて、解放の時間・落ちたフレーム・使用量・スワップを記録する。
+///
+/// docs/SPEC.md「公開後の確認と試作の合格条件」:
+/// - 100 ラウンド続けて強制終了が 0 回（最後まで記録が書き出されれば 0 回）
+/// - 最高速でも 60fps を保つ
+/// - メモリの解放が 200ms 以内
+/// - Mac でスワップが増えない。App Sandbox を有効にしても host_statistics64 の値が取れる
+/// - 本番の書き込み方（sparse）で、書いた分が使用量に計上されるか（使用量 ÷ 献上量が 1 に近いか）
+///
+/// 起動引数 `-bench <ラウンド数>`（と `-bench-fill full|sparse`。既定は本番と同じ sparse）で、起動してすぐに始める。
+/// 画面の「計測」ボタンは、Debug ビルドと TestFlight（App Store 以外）のときだけ出す。
+@MainActor
+@Observable
+final class BenchRunner {
+    struct RoundRecord: Codable, Equatable {
+        var index: Int
+        var outcome: String
+        var budgetMegabytes: Double
+        var targetFill: Double
+        var donatedMegabytes: Double
+        /// 終わりが決まってから全解放が終わるまで（確保を止めるのを待つ時間を含む。合格条件「解放 200ms 以内」の判定に使う）
+        var releaseMilliseconds: Double
+        /// そのうち、munmap で全解放するのにかかった時間
+        var unmapMilliseconds: Double
+        var peakFootprintMegabytes: Double?
+        var footprintAfterReleaseMegabytes: Double?
+        /// ピークのときの、使用量の増えた分 ÷ 献上量（1 に近いほど、書いた分が使用量に計上されている）
+        var footprintPerDonated: Double?
+        /// ピークのときの、このアプリの圧縮されている量
+        var peakCompressedMegabytes: Double?
+        /// 献上中のフレーム
+        var frames: FrameMonitor.Stats
+        /// 離してから結果が出るまで（全解放の間）のフレーム
+        var releaseFrames: FrameMonitor.Stats
+    }
+
+    struct Summary: Codable, Equatable {
+        var device: String
+        var osVersion: String
+        var fillMode: Allocator.FillMode
+        var plannedRounds: Int
+        var completedRounds: Int
+        var outcomes: [String: Int]
+        var maxReleaseMilliseconds: Double
+        var p95ReleaseMilliseconds: Double
+        var releasesOver200Milliseconds: Int
+        var totalFrames: Int
+        var droppedFrames: Int
+        var worstFrameIntervalMilliseconds: Double
+        /// 離してから結果が出るまでの、落ちたフレームと最長の間隔
+        var releaseDroppedFrames: Int
+        var releaseWorstFrameIntervalMilliseconds: Double
+        /// 献上中の平均の更新の速さが、いちばん遅かったラウンドの値（回 / 秒）
+        var slowestAverageFramesPerSecond: Double?
+        var minimumFootprintPerDonated: Double?
+        var swapBeforeMegabytes: Double?
+        var swapMaxMegabytes: Double?
+        var hostStatisticsAvailable: Bool
+        var memoryWarnings: Int
+        var startedAt: Date
+        var finishedAt: Date?
+        var rounds: [RoundRecord]
+    }
+
+    private(set) var isRunning = false
+    private(set) var progress = 0
+    private(set) var plannedRounds = 0
+    private(set) var summary: Summary?
+    private(set) var savedURL: URL?
+    /// 計測のボタンを出すか（Debug ビルドと、App Store 以外の配布）
+    private(set) var isAvailable = false
+
+    @ObservationIgnored private let engine: RoundEngine
+    @ObservationIgnored private let frameMonitor = FrameMonitor()
+    @ObservationIgnored private var task: Task<Void, Never>?
+    @ObservationIgnored private let logger = Logger(subsystem: "jp.shilokuma.UncleRAM", category: "Bench")
+
+    init(engine: RoundEngine) {
+        self.engine = engine
+        #if DEBUG
+        isAvailable = true
+        #else
+        Task { [weak self] in
+            let environment = try? await AppTransaction.shared.payloadValue.environment
+            self?.isAvailable = environment != nil && environment != .production
+        }
+        #endif
+    }
+
+    /// 起動引数で頼まれていれば始める
+    func startFromLaunchArgumentsIfNeeded() {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: "-bench"), arguments.indices.contains(index + 1),
+              let rounds = Int(arguments[index + 1]), rounds > 0, !isRunning else {
+            return
+        }
+        var fillMode = Allocator.FillMode.sparse
+        if let fillIndex = arguments.firstIndex(of: "-bench-fill"), arguments.indices.contains(fillIndex + 1),
+           let mode = Allocator.FillMode(rawValue: arguments[fillIndex + 1]) {
+            fillMode = mode
+        }
+        isAvailable = true
+        start(rounds: rounds, fillMode: fillMode)
+    }
+
+    /// 計測を始められるか。通常のラウンドと同時に動かさないよう、献上中・解放中・遊べないときは始めない
+    var canStart: Bool {
+        guard !isRunning else {
+            return false
+        }
+        switch engine.phase {
+        case .ready, .result:
+            return true
+        case .donating, .settling, .unavailable:
+            return false
+        }
+    }
+
+    func start(rounds: Int = 100, fillMode: Allocator.FillMode = .sparse) {
+        guard canStart else {
+            logger.error("いまは計測を始められません: \(String(describing: self.engine.phase))")
+            return
+        }
+        isRunning = true
+        engine.isAutomated = true
+        progress = 0
+        plannedRounds = rounds
+        savedURL = nil
+        // 計測が終わったら、ふだんのラウンドの書き込み方（本番は sparse）に戻す
+        let previousFillMode = engine.allocator.fillMode
+        engine.allocator.fillMode = fillMode
+        Self.setIdleTimerDisabled(true)
+        task = Task { [weak self] in
+            await self?.run(rounds: rounds, fillMode: fillMode)
+            self?.engine.allocator.fillMode = previousFillMode
+        }
+    }
+
+    func cancel() {
+        task?.cancel()
+    }
+
+    /// バックグラウンドに移ったら計測を中止する（裏でメモリを確保し続けないように。ラウンドは RoundEngine が無効にする）
+    func appDidEnterBackground() {
+        guard isRunning else {
+            return
+        }
+        logger.info("バックグラウンドに移ったので、計測を中止します")
+        cancel()
+    }
+
+    /// 計測の間は画面の自動ロックを止める（ロックされるとバックグラウンドに移って、ラウンドが無効になるため）
+    private static func setIdleTimerDisabled(_ disabled: Bool) {
+        #if os(iOS)
+        UIApplication.shared.isIdleTimerDisabled = disabled
+        #endif
+    }
+
+    func dismissSummary() {
+        summary = nil
+    }
+
+    private func run(rounds: Int, fillMode: Allocator.FillMode) async {
+        let warningsBefore = engine.memoryWarningCount
+        var summary = Self.emptySummary(rounds: rounds, fillMode: fillMode)
+        var swapMax = ProcessMemory.swapUsedBytes()
+        var random = SplitMix64.randomlySeeded()
+
+        for index in 1...rounds {
+            guard !Task.isCancelled else {
+                break
+            }
+            if case .result = engine.phase {
+                engine.reset()
+            }
+            try? await Task.sleep(for: .milliseconds(400))
+            guard !Task.isCancelled else {
+                break
+            }
+            engine.refreshBudget()
+            guard engine.phase == .ready else {
+                logger.error("ラウンド \(index) を始められません: \(String(describing: self.engine.phase))")
+                break
+            }
+            // 離す位置を散らす（早いもの・回収ラインを越えるもの・安全ラインまで押すもの）
+            // 中止したラウンドと、始められなかったラウンドは記録しない（途中で止めた量や 0 が、納品として数えられてしまうため）
+            guard let record = await playRound(index: index, target: random.uniform(0.2...0.86), swapMax: &swapMax) else {
+                break
+            }
+            summary.rounds.append(record)
+            summary.completedRounds = index
+            progress = index
+            logger.info("ラウンド \(index): \(record.outcome) \(record.donatedMegabytes) MB 解放 \(record.releaseMilliseconds) ms")
+        }
+
+        summary.swapMaxMegabytes = swapMax.map(Self.megabytes)
+        summary.memoryWarnings = engine.memoryWarningCount - warningsBefore
+        summary.finishedAt = Date()
+        Self.aggregate(&summary)
+        self.summary = summary
+        savedURL = save(summary)
+        if case .result = engine.phase {
+            engine.reset()
+        }
+        Self.setIdleTimerDisabled(false)
+        engine.isAutomated = false
+        isRunning = false
+    }
+
+    /// 1 ラウンドを、献上量が target（枠に対する割合）に届くまで押し続けて遊ぶ
+    private func playRound(index: Int, target: Double, swapMax: inout UInt64?) async -> RoundRecord? {
+        let baseline = ProcessMemory.footprintBytes()
+        frameMonitor.start { [engine] in Self.hasStartedReleasing(engine) }
+        engine.beginHold()
+        // beginHold は枠と発熱を量り直すので、ここで始められないこともある。そのときは記録せずに計測を終える
+        guard engine.phase == .donating else {
+            frameMonitor.stop()
+            logger.error("ラウンド \(index) で献上を始められません: \(String(describing: self.engine.phase))")
+            return nil
+        }
+        // 使用量のピークと、そのときの献上量（書き込みの途中でないときに一緒に量れたものだけ）
+        var peak: (footprint: UInt64, donated: UInt64)?
+        var peakCompressed = ProcessMemory.compressedBytes()
+        while engine.phase == .donating, engine.donatedFill < target, !Task.isCancelled {
+            try? await Task.sleep(for: .milliseconds(50))
+            if let sample = Self.consistentSample(engine), sample.footprint > (peak?.footprint ?? 0) {
+                peak = sample
+            }
+            Self.raise(&peakCompressed, to: ProcessMemory.compressedBytes())
+            Self.raise(&swapMax, to: ProcessMemory.swapUsedBytes())
+        }
+        frameMonitor.markRelease()
+        // 中止されたときも、確保したメモリは必ず解放する
+        engine.endHold(.released)
+        let outcome = await engine.waitForResult()
+        // 結果の画面に切り替わる 1 フレーム分も含めて数える
+        try? await Task.sleep(for: .milliseconds(100))
+        frameMonitor.stop()
+        // 確保を止めて解放する間にスワップが増えることもあるので、結果が出た後にも量る（最後のラウンドの分を取りこぼさない）
+        Self.raise(&swapMax, to: ProcessMemory.swapUsedBytes())
+        // 最後の待ちの間に中止されたときも記録しない（フレームを数え切れていないため）
+        guard !Task.isCancelled else {
+            return nil
+        }
+        return RoundRecord(
+            index: index,
+            outcome: outcome.map(Self.describe) ?? "none",
+            budgetMegabytes: Self.megabytes(engine.budgetBytes),
+            targetFill: target,
+            donatedMegabytes: Self.megabytes(outcome?.donatedBytes ?? 0),
+            releaseMilliseconds: (engine.lastReleaseDuration ?? 0) * 1000,
+            unmapMilliseconds: (engine.lastUnmapDuration ?? 0) * 1000,
+            peakFootprintMegabytes: (peak?.footprint ?? baseline).map(Self.megabytes),
+            footprintAfterReleaseMegabytes: ProcessMemory.footprintBytes().map(Self.megabytes),
+            footprintPerDonated: peak.flatMap { sample in
+                Self.ratio(
+                    peak: sample.footprint,
+                    baseline: baseline,
+                    donated: sample.donated > 0 ? sample.donated : (outcome?.donatedBytes ?? 0)
+                )
+            },
+            peakCompressedMegabytes: peakCompressed.map(Self.megabytes),
+            frames: frameMonitor.stats,
+            releaseFrames: frameMonitor.releaseStats
+        )
+    }
+
+    private func save(_ summary: Summary) -> URL? {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.dateEncodingStrategy = .iso8601
+        guard let data = try? encoder.encode(summary),
+              let directory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            return nil
+        }
+        let stamp = ISO8601DateFormatter().string(from: summary.startedAt).replacingOccurrences(of: ":", with: "-")
+        let url = directory.appendingPathComponent("bench-\(summary.fillMode.rawValue)-\(stamp).json")
+        do {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try data.write(to: url)
+            logger.info("計測の結果を書き出しました: \(url.path, privacy: .public)")
+            return url
+        } catch {
+            logger.error("計測の結果を書き出せません: \(error.localizedDescription, privacy: .public)")
+            return nil
+        }
+    }
+
+    /// 結果を JSON の文字列にする（画面からコピーする用）
+    func summaryJSON() -> String? {
+        guard let summary else {
+            return nil
+        }
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.dateEncodingStrategy = .iso8601
+        return (try? encoder.encode(summary)).flatMap { String(data: $0, encoding: .utf8) }
+    }
+}
+
+/// 計測の記録の集計と整形
+extension BenchRunner {
+    private static func emptySummary(rounds: Int, fillMode: Allocator.FillMode) -> Summary {
+        Summary(
+            device: DeviceDescription.current,
+            osVersion: ProcessInfo.processInfo.operatingSystemVersionString,
+            fillMode: fillMode,
+            plannedRounds: rounds,
+            completedRounds: 0,
+            outcomes: [:],
+            maxReleaseMilliseconds: 0,
+            p95ReleaseMilliseconds: 0,
+            releasesOver200Milliseconds: 0,
+            totalFrames: 0,
+            droppedFrames: 0,
+            worstFrameIntervalMilliseconds: 0,
+            releaseDroppedFrames: 0,
+            releaseWorstFrameIntervalMilliseconds: 0,
+            slowestAverageFramesPerSecond: nil,
+            swapBeforeMegabytes: ProcessMemory.swapUsedBytes().map(megabytes),
+            swapMaxMegabytes: nil,
+            hostStatisticsAvailable: HostMemory.statistics() != nil,
+            memoryWarnings: 0,
+            startedAt: Date(),
+            rounds: []
+        )
+    }
+
+    private static func aggregate(_ summary: inout Summary) {
+        let releases = summary.rounds.map(\.releaseMilliseconds).sorted()
+        summary.maxReleaseMilliseconds = releases.last ?? 0
+        let p95Index = min(releases.count - 1, Int(Double(releases.count) * 0.95))
+        summary.p95ReleaseMilliseconds = releases.isEmpty ? 0 : releases[p95Index]
+        summary.releasesOver200Milliseconds = releases.filter { $0 > 200 }.count
+        summary.totalFrames = summary.rounds.map(\.frames.frames).reduce(0, +)
+        summary.droppedFrames = summary.rounds.map(\.frames.droppedFrames).reduce(0, +)
+        summary.worstFrameIntervalMilliseconds = summary.rounds.map(\.frames.worstIntervalMilliseconds).max() ?? 0
+        summary.releaseDroppedFrames = summary.rounds.map(\.releaseFrames.droppedFrames).reduce(0, +)
+        summary.releaseWorstFrameIntervalMilliseconds = summary.rounds.map(\.releaseFrames.worstIntervalMilliseconds).max() ?? 0
+        summary.slowestAverageFramesPerSecond = summary.rounds
+            .filter { $0.frames.seconds > 0 }
+            .map { ($0.frames.averageFramesPerSecond * 10).rounded() / 10 }
+            .min()
+        summary.minimumFootprintPerDonated = summary.rounds.compactMap(\.footprintPerDonated).min()
+        summary.outcomes = Dictionary(grouping: summary.rounds, by: \.outcome).mapValues(\.count)
+    }
+
+    private static func describe(_ outcome: RoundOutcome) -> String {
+        switch outcome.kind {
+        case .delivered:
+            outcome.stoppedAtSafetyLine ? "safetyLine" : "delivered"
+        case .collected:
+            outcome.plan.isEarlyCollection ? "earlyCollected" : "collected"
+        case .audited:
+            "audited"
+        case let .voided(reason):
+            "voided-\(reason)"
+        }
+    }
+
+    private static func megabytes(_ bytes: UInt64) -> Double {
+        (Double(bytes) / 1_048_576 * 10).rounded() / 10
+    }
+
+    /// 使用量の増えた分 ÷ 献上量。使用量が増えなかったら 0（計上されていない）。量れなかったときだけ nil
+    private static func ratio(peak: UInt64?, baseline: UInt64?, donated: UInt64) -> Double? {
+        guard let peak, let baseline, donated > 0 else {
+            return nil
+        }
+        guard peak > baseline else {
+            return 0
+        }
+        return (Double(peak - baseline) / Double(donated) * 1000).rounded() / 1000
+    }
+
+    /// 使用量と献上量を、書き込みの途中でないときに一緒に量る。
+    /// 書き込みの途中だと、書いた分が使用量にだけ表れて献上量にはまだ数えられていないので、比率が大きく出る。そのときは使わない
+    private static func consistentSample(_ engine: RoundEngine) -> (footprint: UInt64, donated: UInt64)? {
+        let sequence = engine.allocator.fillSequenceNumber
+        guard sequence.isMultiple(of: 2), let footprint = ProcessMemory.footprintBytes() else {
+            return nil
+        }
+        let donated = engine.donatedBytes
+        guard engine.allocator.fillSequenceNumber == sequence else {
+            return nil
+        }
+        return (footprint, donated)
+    }
+
+    /// ラウンドの終わりが決まって、確保を止めて解放する段階に入ったか
+    private static func hasStartedReleasing(_ engine: RoundEngine) -> Bool {
+        switch engine.phase {
+        case .settling, .result:
+            true
+        case .ready, .donating, .unavailable:
+            false
+        }
+    }
+
+    /// 量れた値が、今までの最大より大きければ置き換える
+    private static func raise(_ maximum: inout UInt64?, to value: UInt64?) {
+        if let value, value > (maximum ?? 0) {
+            maximum = value
+        }
+    }
+}

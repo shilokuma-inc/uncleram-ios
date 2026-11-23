@@ -38,6 +38,12 @@
 
 - 2026-11-12: リポジトリは shilokuma-inc の public。仕様書は実在の名前を伏せて `docs/` に入れる
 - 2026-11-12: iPhone は縦だけ。iPad は全方向（Split View のため）で、横幅で切り替える（広いときは Mac の横長レイアウト、狭いときは iPhone のレイアウト）
+- 2026-11-23: 年末年始の審査の混雑は承知のうえで、初回は全部入り（HANDOFF.md「確定した決定事項」の初回の範囲）で出す。範囲を絞って先に出す案は取らない
+- 2026-11-23: Mac で圧縮が急に増えたら「監査」にする閾値は、0.5 秒の間に max(枠の 5%, 256MB)
+- 2026-11-23: 枠が 600MB 未満のときの案内は「いまは空きメモリが足りません」と「枠 ○○ MB。ほかのアプリを閉じてから、もう一度お試しください。」
+- 2026-11-23: はったりの「にやり」は、毎回、会長の台詞を 0.8 秒だけ「……なんてな。」にして見せる（表情の絵は足さない）。SPEC.md の「初めてのときだけの吹き出し『…なんてな』」は、ほかの吹き出しと一緒に入れる
+- 2026-11-23: 警告（3 段階目）の会長の台詞は接近と同じにし、警告は画面のノイズ（と振動）で知らせる
+- 2026-11-23: 確保したメモリへの書き込み方は、ページごとに少しだけ乱数を書く方式（sparse）にする。経緯と計測の結果は [docs/SPEC.md](docs/SPEC.md)「書き込み方の見直し」
 
 ## 進め方
 
@@ -68,8 +74,12 @@ xcodebuild test -project UncleRAM.xcodeproj -scheme UncleRAM -destination 'platf
   ENABLE_APP_SANDBOX=NO
 # SwiftLint（CI と同じ。SPM が解決したバイナリを使う）
 "$(find <DerivedData>/SourcePackages/artifacts -type f -name swiftlint -path '*macos*' | head -1)" lint --strict
-# 数値の試算（早期回収・ヒント・速さを変えたら回し直す）
+# 数値の試算（早期回収・ヒント・速さを変えたら回し直す。1 分ほどかかる）
 python3 Tools/sim.py
+# 試作の計測（ラウンドを自動で続けて、解放の時間・落ちたフレーム・使用量・スワップを JSON に残す）
+<アプリ> -bench 100   # 書き込み方は既定で本番と同じ sparse。-bench-fill full で全体を乱数で埋める方式と比べられる
+# 撮影モード（メモリを確保せずに、ラウンドの場面を表示する。PR のスクリーンショット用）
+<アプリ> -screenshot-demo -screenshot-scene approach   # ほかの場面: home・sign・warning・delivered・collected
 ```
 
 - Simulator の `os_proc_available_memory()` は実際の値を返さないので、仮の枠（例: 2GB）で動かす（SPEC.md「技術仕様」）
