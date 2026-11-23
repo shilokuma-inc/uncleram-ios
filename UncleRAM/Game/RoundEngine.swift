@@ -76,6 +76,8 @@ final class RoundEngine {
     @ObservationIgnored private let probe: any MemoryProbe
     @ObservationIgnored private var random: SplitMix64
     @ObservationIgnored private let thermalState: () -> ProcessInfo.ThermalState
+    /// 全メモリを解放する（かかった秒数を返す）。テストで、解放の途中に届く知らせを作るために差し替えられる
+    @ObservationIgnored private let releaseMemory: @Sendable (Allocator) -> TimeInterval
     @ObservationIgnored private var worker: DonationWorker?
     @ObservationIgnored private var stoppedAtSafetyLine = false
     @ObservationIgnored private var bluffTask: Task<Void, Never>?
@@ -91,13 +93,15 @@ final class RoundEngine {
         allocator: Allocator = Allocator(),
         probe: any MemoryProbe = MemoryProbes.current,
         random: SplitMix64 = .randomlySeeded(),
-        thermalState: @escaping () -> ProcessInfo.ThermalState = { ProcessInfo.processInfo.thermalState }
+        thermalState: @escaping () -> ProcessInfo.ThermalState = { ProcessInfo.processInfo.thermalState },
+        releaseMemory: @escaping @Sendable (Allocator) -> TimeInterval = { $0.releaseAll() }
     ) {
         self.client = client
         self.allocator = allocator
         self.probe = probe
         self.random = random
         self.thermalState = thermalState
+        self.releaseMemory = releaseMemory
         refreshBudget()
     }
 
@@ -306,14 +310,16 @@ final class RoundEngine {
             default:
                 crossedLine ? .collected : kind
             }
+            let releaseMemory = releaseMemory
+            lastUnmapDuration = await Task.detached(priority: .userInitiated) {
+                releaseMemory(allocator)
+            }.value
+            lastReleaseDuration = settleStart.duration(to: .now).seconds
+            // 確保を止めるのを待つ間だけでなく、解放を待つ間に届いたバックグラウンドへの移行も無効にする（解放が終わってから確かめる）
             if let pendingVoid {
                 kind = .voided(pendingVoid)
                 self.pendingVoid = nil
             }
-            lastUnmapDuration = await Task.detached(priority: .userInitiated) {
-                allocator.releaseAll()
-            }.value
-            lastReleaseDuration = settleStart.duration(to: .now).seconds
             phase = .result(
                 RoundOutcome(
                     kind: kind,
