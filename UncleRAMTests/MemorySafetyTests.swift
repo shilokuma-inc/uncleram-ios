@@ -53,6 +53,21 @@ struct MemorySafetyTests {
         #expect(duration < 0.2)
     }
 
+    /// 書き込みの数えは、書き込みの間だけ奇数になり、1 回の確保で 2 つ進む（計測で、使用量と献上量を同じ状態で量るため）
+    @Test
+    func fillSequenceIsEvenOutsideWrites() {
+        let allocator = Allocator(fillMode: .sparse)
+        let probe = SimulatedMemoryProbe(totalBytes: 2_048 * Self.megabyte)
+        let safety = SafetyLine(budgetBytes: probe.budgetBytes())
+        #expect(allocator.fillSequenceNumber == 0)
+        _ = allocator.allocate(count: 2, safety: safety, probe: probe)
+        #expect(allocator.fillSequenceNumber == 2)
+        _ = allocator.allocate(count: 1, safety: safety, probe: probe)
+        #expect(allocator.fillSequenceNumber.isMultiple(of: 2))
+        #expect(allocator.fillSequenceNumber == 4)
+        allocator.releaseAll()
+    }
+
     /// 離すと納品になり、結果を出す前に全メモリが解放されている
     @Test
     func releasingDeliversAndFreesMemory() async throws {
@@ -114,6 +129,21 @@ struct MemorySafetyTests {
         let unmap = try #require(engine.lastUnmapDuration)
         #expect(release >= 0.3)
         #expect(unmap <= release)
+    }
+
+    /// 中止されたタスクから結果を待っても、解放が進んで結果が出る（計測の「中止」・バックグラウンド・画面を閉じたとき）。
+    /// 中止済みのタスクの Task.sleep は待たずにすぐ投げるので、待ち方によってはメインアクターを手放さず、解放の処理が進まない
+    @Test(.timeLimit(.minutes(1)))
+    func waitingFromCancelledTaskStillSettles() async throws {
+        let engine = try await donatingEngine(seed: 8)
+        let task = Task { @MainActor in
+            withUnsafeCurrentTask { $0?.cancel() }
+            engine.endHold(.released)
+            return await engine.waitForResult()
+        }
+        let outcome = await task.value
+        #expect(outcome?.kind == .delivered)
+        #expect(engine.allocator.allocatedBytes == 0)
     }
 
     /// バックグラウンドへの移行は無効（スコア 0）
