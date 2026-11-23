@@ -13,9 +13,9 @@ import UIKit
 /// - 最高速でも 60fps を保つ
 /// - メモリの解放が 200ms 以内
 /// - Mac でスワップが増えない。App Sandbox を有効にしても host_statistics64 の値が取れる
-/// - ページごとに少しだけ乱数を書く方式（sparse）でも使用量に計上されるか（圧縮されないか）
+/// - 本番の書き込み方（sparse）で、書いた分が使用量に計上されるか（使用量 ÷ 献上量が 1 に近いか）
 ///
-/// 起動引数 `-bench <ラウンド数>`（と `-bench-fill full|sparse`）で、起動してすぐに始める。
+/// 起動引数 `-bench <ラウンド数>`（と `-bench-fill full|sparse`。既定は本番と同じ sparse）で、起動してすぐに始める。
 /// 画面の「計測」ボタンは、Debug ビルドと TestFlight（App Store 以外）のときだけ出す。
 @MainActor
 @Observable
@@ -102,7 +102,7 @@ final class BenchRunner {
               let rounds = Int(arguments[index + 1]), rounds > 0, !isRunning else {
             return
         }
-        var fillMode = Allocator.FillMode.full
+        var fillMode = Allocator.FillMode.sparse
         if let fillIndex = arguments.firstIndex(of: "-bench-fill"), arguments.indices.contains(fillIndex + 1),
            let mode = Allocator.FillMode(rawValue: arguments[fillIndex + 1]) {
             fillMode = mode
@@ -124,7 +124,7 @@ final class BenchRunner {
         }
     }
 
-    func start(rounds: Int = 100, fillMode: Allocator.FillMode = .full) {
+    func start(rounds: Int = 100, fillMode: Allocator.FillMode = .sparse) {
         guard canStart else {
             logger.error("いまは計測を始められません: \(String(describing: self.engine.phase))")
             return

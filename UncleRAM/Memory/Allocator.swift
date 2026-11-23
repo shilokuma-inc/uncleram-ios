@@ -4,17 +4,17 @@ import Synchronization
 
 /// 献上するメモリの確保と全解放。**メモリの確保はこの型からしか行わない。**
 ///
-/// - 16MB ごとに確保し、書き込む。書き込まないと使用量に計上されず、ゼロ埋めだと圧縮されて数字が動かない
+/// - 16MB ごとに確保し、書き込む。書き込まないと使用量に計上されない。既定はページごとに少しだけ乱数を書く方式（`FillMode.sparse`）
 /// - 確保の前に毎回、安全ラインの 2 つの条件を確かめる（`SafetyLine`）。満たさなければ確保しない
 /// - 画面の献上量は、実際に確保して書き込んだ量（`allocatedBytes`）
 nonisolated final class Allocator: Sendable {
     static let chunkSize: UInt64 = 16 * 1024 * 1024
 
-    /// 書き込み方。どちらが使用量に正しく計上されるか（圧縮されないか）は、試作の計測で確かめる
+    /// 書き込み方。2026-11-23 に、試作の計測の結果から sparse を本番の書き込み方にした（docs/SPEC.md「書き込み方の見直し」）
     enum FillMode: String, Sendable, CaseIterable, Codable {
-        /// 全体を乱数で埋める（重いが、圧縮されない）
+        /// 全体を乱数で埋める（計測の比較用）。重く、iPhone 13 では解放が 200ms を越え、メモリ警告も多かった
         case full
-        /// ページごとに少しだけ乱数を書く（軽いが、残りがゼロなので圧縮されるおそれがある）
+        /// ページごとに少しだけ乱数を書く（本番）。残りはゼロで圧縮されやすいが、使用量には確保した大きさのまま計上される
         case sparse
     }
 
@@ -33,7 +33,7 @@ nonisolated final class Allocator: Sendable {
     private let fillSequence = Atomic<UInt64>(0)
     private let mode: Mutex<FillMode>
 
-    init(fillMode: FillMode = .full) {
+    init(fillMode: FillMode = .sparse) {
         mode = Mutex(fillMode)
     }
 
