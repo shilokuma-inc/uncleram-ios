@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 import Testing
 @testable import UncleRAM
 
@@ -77,6 +78,42 @@ struct MemorySafetyTests {
         #expect(engine.lastReleaseDuration != nil)
         engine.reset()
         #expect(engine.phase == .ready)
+    }
+
+    /// 離した瞬間に書き込み中だったチャンクは献上量に数えない。解放の時間には、確保を止めるのを待つ時間も入る
+    @Test
+    func releaseSettlesAtAmountWhenReleased() async throws {
+        let probe = GatedMemoryProbe(totalBytes: 2_048 * Self.megabyte)
+        let engine = RoundEngine(
+            allocator: Allocator(fillMode: .sparse),
+            probe: probe,
+            random: SplitMix64(seed: 6),
+            thermalState: { .nominal }
+        )
+        engine.beginHold()
+        let deadline = ContinuousClock.now + .seconds(5)
+        while engine.donatedBytes == 0, ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        // 次の確保の途中（安全ラインを確かめるところ）でワーカーを止めておき、その間に離す
+        probe.close()
+        while !probe.isWaiting, ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        try #require(probe.isWaiting)
+        let atRelease = engine.donatedBytes
+        engine.endHold(.released)
+        try await Task.sleep(for: .milliseconds(300))
+        probe.open()
+
+        let outcome = try #require(await engine.waitForResult())
+        #expect(outcome.kind == .delivered)
+        #expect(outcome.donatedBytes == atRelease)
+        #expect(engine.allocator.allocatedBytes == 0)
+        let release = try #require(engine.lastReleaseDuration)
+        let unmap = try #require(engine.lastUnmapDuration)
+        #expect(release >= 0.3)
+        #expect(unmap <= release)
     }
 
     /// バックグラウンドへの移行は無効（スコア 0）
@@ -159,5 +196,45 @@ struct MemorySafetyTests {
         #expect(engine.phase == .unavailable(.thermal))
         engine.beginHold()
         #expect(engine.phase == .unavailable(.thermal))
+    }
+}
+
+/// 確保の途中でワーカーを止めておける仮の端末。離した瞬間に、ワーカーがまだチャンクを確保している場面を作る
+nonisolated final class GatedMemoryProbe: MemoryProbe {
+    private let base: SimulatedMemoryProbe
+    private let closed = Atomic<Bool>(false)
+    private let waiting = Atomic<Bool>(false)
+    private let gate = DispatchSemaphore(value: 0)
+
+    init(totalBytes: UInt64) {
+        base = SimulatedMemoryProbe(totalBytes: totalBytes)
+    }
+
+    /// ワーカーが止まって待っているか
+    var isWaiting: Bool {
+        waiting.load(ordering: .acquiring)
+    }
+
+    /// 次に残量を聞かれたところで、ワーカーを止める
+    func close() {
+        closed.store(true, ordering: .releasing)
+    }
+
+    /// 止めていたワーカーを進める
+    func open() {
+        closed.store(false, ordering: .releasing)
+        gate.signal()
+    }
+
+    func budgetBytes() -> UInt64 {
+        base.budgetBytes()
+    }
+
+    func availableBytes(allocatedByRound: UInt64) -> UInt64 {
+        if closed.load(ordering: .acquiring) {
+            waiting.store(true, ordering: .releasing)
+            gate.wait()
+        }
+        return base.availableBytes(allocatedByRound: allocatedByRound)
     }
 }
