@@ -338,7 +338,9 @@ extension RoundEngine {
             case .ready, .unavailable:
                 return nil
             case .donating, .settling:
-                try? await Task.sleep(for: .milliseconds(10))
+                // 中止されたタスク（計測の「中止」など）から呼ばれても、10ms ずつ待つ。中止済みのタスクの Task.sleep は
+                // 待たずにすぐ投げるので、そのまま回すとメインスレッドで空回りする。中止を引き継がない別のタスクで眠る
+                await Task { try? await Task.sleep(for: .milliseconds(10)) }.value
             }
         }
     }
