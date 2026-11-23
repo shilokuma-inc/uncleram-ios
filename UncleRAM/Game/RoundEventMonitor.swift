@@ -12,7 +12,7 @@ import AppKit
 /// - Mac: スペースキーの長押し、ウィンドウが前面でなくなったら離したとみなす、0.5 秒ごとに圧縮量を見て急に増えたら監査
 @MainActor
 final class RoundEventMonitor {
-    /// Mac で、0.5 秒の間に圧縮メモリがこれだけ増えたら「監査」にする（枠に対する割合と下限）。仮の値で、試作の計測で決める
+    /// Mac で、0.5 秒の間に圧縮メモリがこれだけ増えたら「監査」にする（枠に対する割合と下限）。2026-11-23 にユーザーが決めた値（CLAUDE.md）
     static let compressionSurgeRatio = 0.05
     static let compressionSurgeMinimumBytes: UInt64 = 256 * 1024 * 1024
     static let compressionCheckInterval: TimeInterval = 0.5
