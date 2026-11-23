@@ -232,12 +232,8 @@ final class BenchRunner {
                 peakFootprint = footprint
                 peakDonated = engine.donatedBytes
             }
-            if let compressed = ProcessMemory.compressedBytes(), compressed > (peakCompressed ?? 0) {
-                peakCompressed = compressed
-            }
-            if let swap = ProcessMemory.swapUsedBytes(), swap > (swapMax ?? 0) {
-                swapMax = swap
-            }
+            Self.raise(&peakCompressed, to: ProcessMemory.compressedBytes())
+            Self.raise(&swapMax, to: ProcessMemory.swapUsedBytes())
         }
         frameMonitor.markRelease()
         // 中止されたときも、確保したメモリは必ず解放する
@@ -248,9 +244,7 @@ final class BenchRunner {
         try? await Task.sleep(for: .milliseconds(100))
         frameMonitor.stop()
         // 確保を止めて解放する間にスワップが増えることもあるので、結果が出た後にも量る（最後のラウンドの分を取りこぼさない）
-        if let swap = ProcessMemory.swapUsedBytes(), swap > (swapMax ?? 0) {
-            swapMax = swap
-        }
+        Self.raise(&swapMax, to: ProcessMemory.swapUsedBytes())
         guard !cancelled else {
             return nil
         }
@@ -275,6 +269,41 @@ final class BenchRunner {
         )
     }
 
+    private func save(_ summary: Summary) -> URL? {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.dateEncodingStrategy = .iso8601
+        guard let data = try? encoder.encode(summary),
+              let directory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            return nil
+        }
+        let stamp = ISO8601DateFormatter().string(from: summary.startedAt).replacingOccurrences(of: ":", with: "-")
+        let url = directory.appendingPathComponent("bench-\(summary.fillMode.rawValue)-\(stamp).json")
+        do {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try data.write(to: url)
+            logger.info("計測の結果を書き出しました: \(url.path, privacy: .public)")
+            return url
+        } catch {
+            logger.error("計測の結果を書き出せません: \(error.localizedDescription, privacy: .public)")
+            return nil
+        }
+    }
+
+    /// 結果を JSON の文字列にする（画面からコピーする用）
+    func summaryJSON() -> String? {
+        guard let summary else {
+            return nil
+        }
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.dateEncodingStrategy = .iso8601
+        return (try? encoder.encode(summary)).flatMap { String(data: $0, encoding: .utf8) }
+    }
+}
+
+/// 計測の記録の集計と整形
+extension BenchRunner {
     private static func emptySummary(rounds: Int, fillMode: Allocator.FillMode) -> Summary {
         Summary(
             device: DeviceDescription.current,
@@ -320,38 +349,6 @@ final class BenchRunner {
         summary.outcomes = Dictionary(grouping: summary.rounds, by: \.outcome).mapValues(\.count)
     }
 
-    private func save(_ summary: Summary) -> URL? {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        encoder.dateEncodingStrategy = .iso8601
-        guard let data = try? encoder.encode(summary),
-              let directory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
-            return nil
-        }
-        let stamp = ISO8601DateFormatter().string(from: summary.startedAt).replacingOccurrences(of: ":", with: "-")
-        let url = directory.appendingPathComponent("bench-\(summary.fillMode.rawValue)-\(stamp).json")
-        do {
-            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-            try data.write(to: url)
-            logger.info("計測の結果を書き出しました: \(url.path, privacy: .public)")
-            return url
-        } catch {
-            logger.error("計測の結果を書き出せません: \(error.localizedDescription, privacy: .public)")
-            return nil
-        }
-    }
-
-    /// 結果を JSON の文字列にする（画面からコピーする用）
-    func summaryJSON() -> String? {
-        guard let summary else {
-            return nil
-        }
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        encoder.dateEncodingStrategy = .iso8601
-        return (try? encoder.encode(summary)).flatMap { String(data: $0, encoding: .utf8) }
-    }
-
     private static func describe(_ outcome: RoundOutcome) -> String {
         switch outcome.kind {
         case .delivered:
@@ -378,5 +375,12 @@ final class BenchRunner {
             return 0
         }
         return (Double(peak - baseline) / Double(donated) * 1000).rounded() / 1000
+    }
+
+    /// 量れた値が、今までの最大より大きければ置き換える
+    private static func raise(_ maximum: inout UInt64?, to value: UInt64?) {
+        if let value, value > (maximum ?? 0) {
+            maximum = value
+        }
     }
 }
