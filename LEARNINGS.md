@@ -22,6 +22,7 @@
 - `os_proc_available_memory()` は macOS では使えない（unavailable）。iOS の量り方は `#if os(iOS)` で囲む（2026-11-12）
 - 実機の計測の結果は、Mac からケーブルで取り出せる。`xcrun devicectl device info files --device <UDID> --domain-type appDataContainer --domain-identifier jp.shilokuma.UncleRAM --subdirectory Documents` で一覧し、`xcrun devicectl device copy from …（同じ指定）--source Documents/<ファイル名> --destination <保存先>` でコピーする（2026-11-23）
 - Xcode（xcodebuild）から実機に入れた Release ビルドでも、画面の「計測」ボタンは出た（`AppTransaction` の environment が production にならないため）。計測は実際の速さに近い Release で行う（2026-11-23、iPhone 13）
+- Mac はウィンドウ 1 つだけの `Window` シーンなので、ウィンドウを閉じるとアプリごと終了する。計測中に閉じると、確保したメモリはプロセスの終了で回収されるが、途中までの計測の JSON は残らない（2026-11-23）
 - 計測の JSON の `releaseMilliseconds` は、2026-11-23 から「終わりが決まってから全解放が終わるまで（確保を止めるのを待つ時間を含む）」になった。それより前の JSON（2026-11-11 の Mac の結果など）は munmap だけの時間なので、そのまま比べない。今の munmap だけの時間は `unmapMilliseconds`（2026-11-23）
 - Mac のアプリを Bash から起動して `screencapture -l` で撮るとき、前の起動のウィンドウの状態が残っていると、テンプレートの WindowGroup の版はウィンドウを開かないことがある。`-ApplePersistenceIgnoreState YES` を付けると開いた。ただし `Window` シーンの版では、この引数を付けるとウィンドウが開かなかったので付けない（2026-11-12）
 
