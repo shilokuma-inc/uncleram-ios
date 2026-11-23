@@ -334,6 +334,8 @@ final class RoundEngine {
         guard phase == .donating, let worker, let plan else {
             return
         }
+        // 献上量は、終わりが決まった（離した）瞬間の量で確定する。確保を止めるのを待つ間に書き終えたチャンクは数えず、解放だけする
+        let donated = allocator.allocatedBytes
         phase = .settling
         cancelBluff()
         self.worker = nil
@@ -341,8 +343,7 @@ final class RoundEngine {
         let allocator = allocator
         Task {
             await worker.stop()
-            let donated = allocator.allocatedBytes
-            // 離したのと同時に回収ラインを越えていたら、回収にする（比べるのは離した瞬間の量）
+            // ワーカーが回収ラインを越えたと知らせるより先に離していても、離した瞬間の量が越えていれば回収にする
             let crossedLine = Double(donated) > plan.collectionLine * Double(budget)
             var kind: RoundOutcome.Kind = switch kind {
             case .voided:
