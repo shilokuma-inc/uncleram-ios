@@ -202,6 +202,39 @@ struct MemorySafetyTests {
         #expect(afterResult.allocator.allocatedBytes == 0)
     }
 
+    /// inactive で離して解放を待つ間に、バックグラウンドへ移ったら無効になる（解放に時間がかかる端末でも、ホームに戻るだけで確定できない）
+    @Test(.timeLimit(.minutes(1)))
+    func backgroundDuringReleaseVoidsRound() async throws {
+        let release = ReleaseSignal()
+        let engine = RoundEngine(
+            allocator: Allocator(fillMode: .sparse),
+            probe: SimulatedMemoryProbe(totalBytes: 640 * Self.megabyte),
+            random: SplitMix64(seed: 9),
+            thermalState: { .nominal },
+            releaseMemory: { allocator in
+                release.markStarted()
+                Thread.sleep(forTimeInterval: 0.3)
+                return allocator.releaseAll()
+            }
+        )
+        engine.beginHold()
+        let deadline = ContinuousClock.now + .seconds(5)
+        while engine.donatedBytes == 0, ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        engine.endHold(.inactive)
+        while !release.hasStarted, ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        try #require(release.hasStarted)
+        #expect(engine.phase == .settling)
+        engine.void(.background)
+
+        let outcome = try #require(await engine.waitForResult())
+        #expect(outcome.kind == .voided(.background))
+        #expect(engine.allocator.allocatedBytes == 0)
+    }
+
     /// inactive のあと前面に戻ったら（コントロールセンターなど）、納品のまま確定する
     @Test
     func inactiveThenActiveKeepsDelivery() async throws {
@@ -273,5 +306,18 @@ nonisolated final class GatedMemoryProbe: MemoryProbe {
             gate.wait()
         }
         return base.availableBytes(allocatedByRound: allocatedByRound)
+    }
+}
+
+/// 解放が始まったかを、解放するスレッドからテストへ知らせる
+nonisolated final class ReleaseSignal: Sendable {
+    private let started = Atomic<Bool>(false)
+
+    var hasStarted: Bool {
+        started.load(ordering: .acquiring)
+    }
+
+    func markStarted() {
+        started.store(true, ordering: .releasing)
     }
 }
