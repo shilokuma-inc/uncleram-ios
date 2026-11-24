@@ -1,0 +1,424 @@
+{
+  "meta" : {
+    "version" : "2024-11-15"
+  },
+  "resources" : {
+    "leaderboardLocalizations" : {
+      "jp.shilokuma.UncleRAM.lb.daily.mb_ios_l" : [
+        {
+          "formatterSuffix" : "MB",
+          "formatterSuffixSingular" : "MB",
+          "localID" : "jp.shilokuma.UncleRAM.lb.daily.mb_ios_l-en-US",
+          "locale" : "en-US",
+          "name" : "Daily: Donated, iPhone/iPad 16GB+"
+        },
+        {
+          "formatterSuffix" : "MB",
+          "formatterSuffixSingular" : "MB",
+          "localID" : "jp.shilokuma.UncleRAM.lb.daily.mb_ios_l-ja",
+          "locale" : "ja",
+          "name" : "デイリー 献上量 iPhone・iPad 16GB 以上"
+        }
+      ],
+      "jp.shilokuma.UncleRAM.lb.daily.mb_ios_m" : [
+        {
+          "formatterSuffix" : "MB",
+          "formatterSuffixSingular" : "MB",
+          "localID" : "jp.shilokuma.UncleRAM.lb.daily.mb_ios_m-en-US",
+          "locale" : "en-US",
+          "name" : "Daily: Donated, iPhone/iPad 12GB"
+        },
+        {
+          "formatterSuffix" : "MB",
+          "formatterSuffixSingular" : "MB",
+          "localID" : "jp.shilokuma.UncleRAM.lb.daily.mb_ios_m-ja",
+          "locale" : "ja",
+          "name" : "デイリー 献上量 iPhone・iPad 12GB"
+        }
+      ],
+      "jp.shilokuma.UncleRAM.lb.daily.mb_ios_s" : [
+        {
+          "formatterSuffix" : "MB",
+          "formatterSuffixSingular" : "MB",
+          "localID" : "jp.shilokuma.UncleRAM.lb.daily.mb_ios_s-en-US",
+          "locale" : "en-US",
+          "name" : "Daily: Donated, iPhone/iPad ≤8GB"
+        },
+        {
+          "formatterSuffix" : "MB",
+          "formatterSuffixSingular" : "MB",
+          "localID" : "jp.shilokuma.UncleRAM.lb.daily.mb_ios_s-ja",
+          "locale" : "ja",
+          "name" : "デイリー 献上量 iPhone・iPad 8GB 以下"
+        }
+      ],
+      "jp.shilokuma.UncleRAM.lb.daily.mb_mac_l" : [
+        {
+          "formatterSuffix" : "MB",
+          "formatterSuffixSingular" : "MB",
+          "localID" : "jp.shilokuma.UncleRAM.lb.daily.mb_mac_l-en-US",
+          "locale" : "en-US",
+          "name" : "Daily: Donated, Mac 48GB+"
+        },
+        {
+          "formatterSuffix" : "MB",
+          "formatterSuffixSingular" : "MB",
+          "localID" : "jp.shilokuma.UncleRAM.lb.daily.mb_mac_l-ja",
+          "locale" : "ja",
+          "name" : "デイリー 献上量 Mac 48GB 以上"
+        }
+      ],
+      "jp.shilokuma.UncleRAM.lb.daily.mb_mac_m" : [
+        {
+          "formatterSuffix" : "MB",
+          "formatterSuffixSingular" : "MB",
+          "localID" : "jp.shilokuma.UncleRAM.lb.daily.mb_mac_m-en-US",
+          "locale" : "en-US",
+          "name" : "Daily: Donated, Mac 24–32GB"
+        },
+        {
+          "formatterSuffix" : "MB",
+          "formatterSuffixSingular" : "MB",
+          "localID" : "jp.shilokuma.UncleRAM.lb.daily.mb_mac_m-ja",
+          "locale" : "ja",
+          "name" : "デイリー 献上量 Mac 24〜32GB"
+        }
+      ],
+      "jp.shilokuma.UncleRAM.lb.daily.mb_mac_s" : [
+        {
+          "formatterSuffix" : "MB",
+          "formatterSuffixSingular" : "MB",
+          "localID" : "jp.shilokuma.UncleRAM.lb.daily.mb_mac_s-en-US",
+          "locale" : "en-US",
+          "name" : "Daily: Donated, Mac ≤16GB"
+        },
+        {
+          "formatterSuffix" : "MB",
+          "formatterSuffixSingular" : "MB",
+          "localID" : "jp.shilokuma.UncleRAM.lb.daily.mb_mac_s-ja",
+          "locale" : "ja",
+          "name" : "デイリー 献上量 Mac 16GB 以下"
+        }
+      ],
+      "jp.shilokuma.UncleRAM.lb.daily.skill" : [
+        {
+          "formatterSuffix" : "pt",
+          "formatterSuffixSingular" : "pt",
+          "localID" : "jp.shilokuma.UncleRAM.lb.daily.skill-en-US",
+          "locale" : "en-US",
+          "name" : "Daily: Skill"
+        },
+        {
+          "formatterSuffix" : "pt",
+          "formatterSuffixSingular" : "pt",
+          "localID" : "jp.shilokuma.UncleRAM.lb.daily.skill-ja",
+          "locale" : "ja",
+          "name" : "デイリー 腕前スコア"
+        }
+      ],
+      "jp.shilokuma.UncleRAM.lb.express.mb_ios_l" : [
+        {
+          "formatterSuffix" : "MB",
+          "formatterSuffixSingular" : "MB",
+          "localID" : "jp.shilokuma.UncleRAM.lb.express.mb_ios_l-en-US",
+          "locale" : "en-US",
+          "name" : "Express: Donated, iPhone/iPad 16GB+"
+        },
+        {
+          "formatterSuffix" : "MB",
+          "formatterSuffixSingular" : "MB",
+          "localID" : "jp.shilokuma.UncleRAM.lb.express.mb_ios_l-ja",
+          "locale" : "ja",
+          "name" : "速達便 献上量 iPhone・iPad 16GB 以上"
+        }
+      ],
+      "jp.shilokuma.UncleRAM.lb.express.mb_ios_m" : [
+        {
+          "formatterSuffix" : "MB",
+          "formatterSuffixSingular" : "MB",
+          "localID" : "jp.shilokuma.UncleRAM.lb.express.mb_ios_m-en-US",
+          "locale" : "en-US",
+          "name" : "Express: Donated, iPhone/iPad 12GB"
+        },
+        {
+          "formatterSuffix" : "MB",
+          "formatterSuffixSingular" : "MB",
+          "localID" : "jp.shilokuma.UncleRAM.lb.express.mb_ios_m-ja",
+          "locale" : "ja",
+          "name" : "速達便 献上量 iPhone・iPad 12GB"
+        }
+      ],
+      "jp.shilokuma.UncleRAM.lb.express.mb_ios_s" : [
+        {
+          "formatterSuffix" : "MB",
+          "formatterSuffixSingular" : "MB",
+          "localID" : "jp.shilokuma.UncleRAM.lb.express.mb_ios_s-en-US",
+          "locale" : "en-US",
+          "name" : "Express: Donated, iPhone/iPad ≤8GB"
+        },
+        {
+          "formatterSuffix" : "MB",
+          "formatterSuffixSingular" : "MB",
+          "localID" : "jp.shilokuma.UncleRAM.lb.express.mb_ios_s-ja",
+          "locale" : "ja",
+          "name" : "速達便 献上量 iPhone・iPad 8GB 以下"
+        }
+      ],
+      "jp.shilokuma.UncleRAM.lb.express.mb_mac_l" : [
+        {
+          "formatterSuffix" : "MB",
+          "formatterSuffixSingular" : "MB",
+          "localID" : "jp.shilokuma.UncleRAM.lb.express.mb_mac_l-en-US",
+          "locale" : "en-US",
+          "name" : "Express: Donated, Mac 48GB+"
+        },
+        {
+          "formatterSuffix" : "MB",
+          "formatterSuffixSingular" : "MB",
+          "localID" : "jp.shilokuma.UncleRAM.lb.express.mb_mac_l-ja",
+          "locale" : "ja",
+          "name" : "速達便 献上量 Mac 48GB 以上"
+        }
+      ],
+      "jp.shilokuma.UncleRAM.lb.express.mb_mac_m" : [
+        {
+          "formatterSuffix" : "MB",
+          "formatterSuffixSingular" : "MB",
+          "localID" : "jp.shilokuma.UncleRAM.lb.express.mb_mac_m-en-US",
+          "locale" : "en-US",
+          "name" : "Express: Donated, Mac 24–32GB"
+        },
+        {
+          "formatterSuffix" : "MB",
+          "formatterSuffixSingular" : "MB",
+          "localID" : "jp.shilokuma.UncleRAM.lb.express.mb_mac_m-ja",
+          "locale" : "ja",
+          "name" : "速達便 献上量 Mac 24〜32GB"
+        }
+      ],
+      "jp.shilokuma.UncleRAM.lb.express.mb_mac_s" : [
+        {
+          "formatterSuffix" : "MB",
+          "formatterSuffixSingular" : "MB",
+          "localID" : "jp.shilokuma.UncleRAM.lb.express.mb_mac_s-en-US",
+          "locale" : "en-US",
+          "name" : "Express: Donated, Mac ≤16GB"
+        },
+        {
+          "formatterSuffix" : "MB",
+          "formatterSuffixSingular" : "MB",
+          "localID" : "jp.shilokuma.UncleRAM.lb.express.mb_mac_s-ja",
+          "locale" : "ja",
+          "name" : "速達便 献上量 Mac 16GB 以下"
+        }
+      ],
+      "jp.shilokuma.UncleRAM.lb.express.skill" : [
+        {
+          "formatterSuffix" : "pt",
+          "formatterSuffixSingular" : "pt",
+          "localID" : "jp.shilokuma.UncleRAM.lb.express.skill-en-US",
+          "locale" : "en-US",
+          "name" : "Express: Skill"
+        },
+        {
+          "formatterSuffix" : "pt",
+          "formatterSuffixSingular" : "pt",
+          "localID" : "jp.shilokuma.UncleRAM.lb.express.skill-ja",
+          "locale" : "ja",
+          "name" : "速達便 腕前スコア"
+        }
+      ]
+    },
+    "leaderboards" : [
+      {
+        "activityProperties" : {},
+        "archived" : false,
+        "defaultFormatter" : "INTEGER",
+        "referenceName" : "Express Skill",
+        "scoreRangeEnd" : "300",
+        "scoreRangeStart" : "0",
+        "scoreSortType" : "DESC",
+        "submissionType" : "BEST_SCORE",
+        "vendorIdentifier" : "jp.shilokuma.UncleRAM.lb.express.skill",
+        "visibility" : "SHOW_FOR_ALL"
+      },
+      {
+        "activityProperties" : {},
+        "archived" : false,
+        "defaultFormatter" : "INTEGER",
+        "referenceName" : "Express Donated iPhone/iPad 8GB or less",
+        "scoreRangeEnd" : null,
+        "scoreRangeStart" : null,
+        "scoreSortType" : "DESC",
+        "submissionType" : "BEST_SCORE",
+        "vendorIdentifier" : "jp.shilokuma.UncleRAM.lb.express.mb_ios_s",
+        "visibility" : "SHOW_FOR_ALL"
+      },
+      {
+        "activityProperties" : {},
+        "archived" : false,
+        "defaultFormatter" : "INTEGER",
+        "referenceName" : "Express Donated iPhone/iPad 12GB",
+        "scoreRangeEnd" : null,
+        "scoreRangeStart" : null,
+        "scoreSortType" : "DESC",
+        "submissionType" : "BEST_SCORE",
+        "vendorIdentifier" : "jp.shilokuma.UncleRAM.lb.express.mb_ios_m",
+        "visibility" : "SHOW_FOR_ALL"
+      },
+      {
+        "activityProperties" : {},
+        "archived" : false,
+        "defaultFormatter" : "INTEGER",
+        "referenceName" : "Express Donated iPhone/iPad 16GB or more",
+        "scoreRangeEnd" : null,
+        "scoreRangeStart" : null,
+        "scoreSortType" : "DESC",
+        "submissionType" : "BEST_SCORE",
+        "vendorIdentifier" : "jp.shilokuma.UncleRAM.lb.express.mb_ios_l",
+        "visibility" : "SHOW_FOR_ALL"
+      },
+      {
+        "activityProperties" : {},
+        "archived" : false,
+        "defaultFormatter" : "INTEGER",
+        "referenceName" : "Express Donated Mac 16GB or less",
+        "scoreRangeEnd" : null,
+        "scoreRangeStart" : null,
+        "scoreSortType" : "DESC",
+        "submissionType" : "BEST_SCORE",
+        "vendorIdentifier" : "jp.shilokuma.UncleRAM.lb.express.mb_mac_s",
+        "visibility" : "SHOW_FOR_ALL"
+      },
+      {
+        "activityProperties" : {},
+        "archived" : false,
+        "defaultFormatter" : "INTEGER",
+        "referenceName" : "Express Donated Mac 24-32GB",
+        "scoreRangeEnd" : null,
+        "scoreRangeStart" : null,
+        "scoreSortType" : "DESC",
+        "submissionType" : "BEST_SCORE",
+        "vendorIdentifier" : "jp.shilokuma.UncleRAM.lb.express.mb_mac_m",
+        "visibility" : "SHOW_FOR_ALL"
+      },
+      {
+        "activityProperties" : {},
+        "archived" : false,
+        "defaultFormatter" : "INTEGER",
+        "referenceName" : "Express Donated Mac 48GB or more",
+        "scoreRangeEnd" : null,
+        "scoreRangeStart" : null,
+        "scoreSortType" : "DESC",
+        "submissionType" : "BEST_SCORE",
+        "vendorIdentifier" : "jp.shilokuma.UncleRAM.lb.express.mb_mac_l",
+        "visibility" : "SHOW_FOR_ALL"
+      },
+      {
+        "activityProperties" : {},
+        "archived" : false,
+        "defaultFormatter" : "INTEGER",
+        "recurrenceDuration" : "P1D",
+        "recurrenceRule" : "FREQ=DAILY;INTERVAL=1",
+        "recurrenceStartDate" : "2026-12-01T00:00:00Z",
+        "referenceName" : "Daily Skill",
+        "scoreRangeEnd" : "300",
+        "scoreRangeStart" : "0",
+        "scoreSortType" : "DESC",
+        "submissionType" : "BEST_SCORE",
+        "vendorIdentifier" : "jp.shilokuma.UncleRAM.lb.daily.skill",
+        "visibility" : "SHOW_FOR_ALL"
+      },
+      {
+        "activityProperties" : {},
+        "archived" : false,
+        "defaultFormatter" : "INTEGER",
+        "recurrenceDuration" : "P1D",
+        "recurrenceRule" : "FREQ=DAILY;INTERVAL=1",
+        "recurrenceStartDate" : "2026-12-01T00:00:00Z",
+        "referenceName" : "Daily Donated iPhone/iPad 8GB or less",
+        "scoreRangeEnd" : null,
+        "scoreRangeStart" : null,
+        "scoreSortType" : "DESC",
+        "submissionType" : "BEST_SCORE",
+        "vendorIdentifier" : "jp.shilokuma.UncleRAM.lb.daily.mb_ios_s",
+        "visibility" : "SHOW_FOR_ALL"
+      },
+      {
+        "activityProperties" : {},
+        "archived" : false,
+        "defaultFormatter" : "INTEGER",
+        "recurrenceDuration" : "P1D",
+        "recurrenceRule" : "FREQ=DAILY;INTERVAL=1",
+        "recurrenceStartDate" : "2026-12-01T00:00:00Z",
+        "referenceName" : "Daily Donated iPhone/iPad 12GB",
+        "scoreRangeEnd" : null,
+        "scoreRangeStart" : null,
+        "scoreSortType" : "DESC",
+        "submissionType" : "BEST_SCORE",
+        "vendorIdentifier" : "jp.shilokuma.UncleRAM.lb.daily.mb_ios_m",
+        "visibility" : "SHOW_FOR_ALL"
+      },
+      {
+        "activityProperties" : {},
+        "archived" : false,
+        "defaultFormatter" : "INTEGER",
+        "recurrenceDuration" : "P1D",
+        "recurrenceRule" : "FREQ=DAILY;INTERVAL=1",
+        "recurrenceStartDate" : "2026-12-01T00:00:00Z",
+        "referenceName" : "Daily Donated iPhone/iPad 16GB or more",
+        "scoreRangeEnd" : null,
+        "scoreRangeStart" : null,
+        "scoreSortType" : "DESC",
+        "submissionType" : "BEST_SCORE",
+        "vendorIdentifier" : "jp.shilokuma.UncleRAM.lb.daily.mb_ios_l",
+        "visibility" : "SHOW_FOR_ALL"
+      },
+      {
+        "activityProperties" : {},
+        "archived" : false,
+        "defaultFormatter" : "INTEGER",
+        "recurrenceDuration" : "P1D",
+        "recurrenceRule" : "FREQ=DAILY;INTERVAL=1",
+        "recurrenceStartDate" : "2026-12-01T00:00:00Z",
+        "referenceName" : "Daily Donated Mac 16GB or less",
+        "scoreRangeEnd" : null,
+        "scoreRangeStart" : null,
+        "scoreSortType" : "DESC",
+        "submissionType" : "BEST_SCORE",
+        "vendorIdentifier" : "jp.shilokuma.UncleRAM.lb.daily.mb_mac_s",
+        "visibility" : "SHOW_FOR_ALL"
+      },
+      {
+        "activityProperties" : {},
+        "archived" : false,
+        "defaultFormatter" : "INTEGER",
+        "recurrenceDuration" : "P1D",
+        "recurrenceRule" : "FREQ=DAILY;INTERVAL=1",
+        "recurrenceStartDate" : "2026-12-01T00:00:00Z",
+        "referenceName" : "Daily Donated Mac 24-32GB",
+        "scoreRangeEnd" : null,
+        "scoreRangeStart" : null,
+        "scoreSortType" : "DESC",
+        "submissionType" : "BEST_SCORE",
+        "vendorIdentifier" : "jp.shilokuma.UncleRAM.lb.daily.mb_mac_m",
+        "visibility" : "SHOW_FOR_ALL"
+      },
+      {
+        "activityProperties" : {},
+        "archived" : false,
+        "defaultFormatter" : "INTEGER",
+        "recurrenceDuration" : "P1D",
+        "recurrenceRule" : "FREQ=DAILY;INTERVAL=1",
+        "recurrenceStartDate" : "2026-12-01T00:00:00Z",
+        "referenceName" : "Daily Donated Mac 48GB or more",
+        "scoreRangeEnd" : null,
+        "scoreRangeStart" : null,
+        "scoreSortType" : "DESC",
+        "submissionType" : "BEST_SCORE",
+        "vendorIdentifier" : "jp.shilokuma.UncleRAM.lb.daily.mb_mac_l",
+        "visibility" : "SHOW_FOR_ALL"
+      }
+    ]
+  }
+}
