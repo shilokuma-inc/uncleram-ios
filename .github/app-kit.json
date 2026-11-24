@@ -1,0 +1,8 @@
+{
+  "v": 1,
+  "project": "UncleRAM.xcodeproj",
+  "scheme": "UncleRAM",
+  "platforms": ["iOS", "macOS"],
+  "uiTests": "UncleRAMUITests",
+  "archive": { "platforms": ["iOS", "macOS"] }
+}
