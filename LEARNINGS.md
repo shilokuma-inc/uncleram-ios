@@ -11,6 +11,12 @@
 - `INFOPLIST_KEY_UIApplicationSupportsMultipleScenes` は Info.plist の生成に使われない。`INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES` のままだと、Info.plist のファイルに `UIApplicationSupportsMultipleScenes = false` を書いても `true` で上書きされる。生成を止めて、`UIApplicationSceneManifest` をファイルに書く（2026-11-12）
 - 引き継ぎ資料の `tools/` は、macOS のファイルシステムが大文字と小文字を区別しないため、テンプレートの `Tools/` と同じ場所になる。`Tools/sim.py` と `Tools/artwork/` に置いた（2026-11-12）
 
+## Game Center
+
+- Xcode 26 の GameKit バンドル（`.gamekit`）は、中の `gameCenterResources.json`（`meta.version` は `2024-11-15`）だけで読める。書き方は Apple の公式サンプル（apple/unityplugins の `Apple.GameKit.Sample/GameCenterResources.gamekit`）が参考になる。繰り返し型は `recurrenceStartDate`（UTC の ISO 8601）・`recurrenceDuration`（例 `P1D`）・`recurrenceRule`（例 `FREQ=DAILY;INTERVAL=1`）、スコアの範囲は文字列（`"0"`・`"300"`）（2026-11-24）
+- 同期フォルダ（`PBXFileSystemSynchronizedRootGroup`）に置いた `.gamekit` は、xcodebuild ではフォルダとして扱われ、中の JSON がアプリの直下にコピーされる。動きには影響しない。Xcode で作られたほかのプロジェクトでも、同期フォルダの中に置いてターゲットに入れている（2026-11-24）
+- Mac でアドホック署名（`CODE_SIGN_IDENTITY=-`・`CODE_SIGN_STYLE=Manual`・プロファイルなし）すると、`com.apple.developer.game-center` の権限があるだけで「requires a provisioning profile」でビルドが止まる。CI の Mac のテストとアーカイブはアドホック署名なので、権限は今は iOS だけ（`CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]`・`[sdk=iphonesimulator*]`）に付けている（2026-11-24）
+
 ## 仕様と試算
 
 - 引き継ぎの `Tools/sim.py` は、警告（3 段階目）を「手前 3%・±1.5」で試算していた。SPEC.md の値（手前 2%・±2%）で回すと、SPEC.md の試算の表（警告で離す: 期待値 87・回収 54%）が再現するので、SPEC.md の値に合わせた。仕様の数値を変えたら、表と sim.py の両方を見直す（2026-11-12）
