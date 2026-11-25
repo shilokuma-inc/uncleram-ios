@@ -158,6 +158,27 @@ struct LeaderboardRulesTests {
         #expect(record.leaderboardScores.allSatisfy { $0.expiresAt == midnight && $0.context == 132 })
     }
 
+    /// 期限は、ラウンドが終わった時刻ではなく、挑戦した日で決まる
+    @Test
+    func dailyDeadlineFollowsChallengeDay() throws {
+        #expect(RankedRound.daily(Self.firstDay).expiresAt == (try Self.date("2026-12-02T00:00:00Z")))
+        #expect(RankedRound.daily(DailyDay(year: 2026, month: 12, day: 31)).expiresAt == (try Self.date("2027-01-01T00:00:00Z")))
+        #expect(RankedRound.express.expiresAt == nil)
+    }
+
+    /// 世界標準時 0 時をまたいで終わったデイリーは、挑戦した日の回が閉じているので送らない
+    @Test(arguments: ["2026-12-02T00:00:00Z", "2026-12-02T00:00:10Z"])
+    func dailyEndedAfterUTCMidnightIsSkipped(endedAt: String) throws {
+        let decision = RankingRecord.decide(
+            outcome: Self.outcome(.delivered),
+            round: .daily(Self.firstDay),
+            practice: nil,
+            device: Self.iPhone8GB,
+            endedAt: try Self.date(endedAt)
+        )
+        #expect(decision == .skip(.dailyClosed))
+    }
+
     /// 回収されたラウンドは 0 を送る
     @Test
     func collectedRoundSubmitsZero() throws {
