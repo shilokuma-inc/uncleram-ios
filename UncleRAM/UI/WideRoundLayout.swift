@@ -241,7 +241,8 @@ enum DeviceDescription {
     }
 
     /// 搭載メモリ（GB に丸めた値）
+    /// ランキングのクラス分けと同じく、正式な容量に切り上げる（`DeviceMemoryProfile`）
     static var installedGigabytes: Int {
-        Int((Double(ProcessInfo.processInfo.physicalMemory) / 1_073_741_824).rounded())
+        DeviceMemoryProfile.current.nominalGigabytes
     }
 }
