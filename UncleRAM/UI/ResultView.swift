@@ -62,6 +62,7 @@ struct ResultView: View {
             if let stamp {
                 CircleStamp(text: stamp, diameter: 78)
                     .accessibilityLabel(Text(stamp))
+                    .tutorialBubble([.earlyCollection], edge: .bottom, alignment: .trailing)
             }
         }
     }
