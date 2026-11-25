@@ -79,6 +79,8 @@ xcodebuild test -project UncleRAM.xcodeproj -scheme UncleRAM -destination 'platf
 "$(find <DerivedData>/SourcePackages/artifacts -type f -name swiftlint -path '*macos*' | head -1)" lint --strict
 # 数値の試算（早期回収・ヒント・速さを変えたら回し直す。1 分ほどかかる）
 python3 Tools/sim.py
+# 書体（文言に新しい漢字などが増えたら、日本語の書体を作り直す。CI は --check で回し忘れを止める）
+uv run Tools/fonts/subset.py
 # 試作の計測（ラウンドを自動で続けて、解放の時間・落ちたフレーム・使用量・スワップを JSON に残す）
 <アプリ> -bench 100   # 書き込み方は既定で本番と同じ sparse。-bench-fill full で全体を乱数で埋める方式と比べられる
 # 撮影モード（メモリを確保せずに、ラウンドの場面を表示する。PR のスクリーンショット用）

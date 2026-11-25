@@ -12,6 +12,10 @@
 - 引き継ぎ資料の `tools/` は、macOS のファイルシステムが大文字と小文字を区別しないため、テンプレートの `Tools/` と同じ場所になる。`Tools/sim.py` と `Tools/artwork/` に置いた（2026-11-12）
 - プロジェクトは Xcode 26.6 に合わせている。Xcode 27.1 で開いて GameKit バンドルの Push を試したあと、`project.pbxproj` と `Info.plist` が書き換わっていた。並び順が変わり、`UncleRAM.entitlements` が同期フォルダの除外から外れ、`ITSAppUsesNonExemptEncryption` が Info.plist から `INFOPLIST_KEY_` の設定に移り、`Configs/Project.xcconfig` にある `DEVELOPMENT_TEAM` が重ねて書かれる。これはコミットしない（2026-11-26）
 
+## テスト
+
+- リポジトリが `~/Desktop` の下にあると、Mac の Unit テストからソースのファイル（`#filePath` から辿ったもの）を読もうとしたところで、テストが止まって進まなくなる。テストを動かすアプリ（test host）が、デスクトップのファイルへのアクセスの許可を待つため（アドホック署名はビルドのたびに別のアプリとみなされる）。CI はデスクトップの外に checkout するので止まらない。ソースを読む確かめは、テストではなく CI のスクリプト（例: `Tools/fonts/subset.py --check`）で行う（2026-11-26）
+
 ## Game Center
 
 - Xcode 26 の GameKit バンドル（`.gamekit`）は、中の `gameCenterResources.json`（`meta.version` は `2024-11-15`）だけで読める。書き方は Apple の公式サンプル（apple/unityplugins の `Apple.GameKit.Sample/GameCenterResources.gamekit`）が参考になる。繰り返し型は `recurrenceStartDate`（UTC の ISO 8601）・`recurrenceDuration`（例 `P1D`）・`recurrenceRule`（例 `FREQ=DAILY;INTERVAL=1`）、スコアの範囲は文字列（`"0"`・`"300"`）（2026-11-24）
