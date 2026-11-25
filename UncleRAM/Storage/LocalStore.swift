@@ -45,9 +45,10 @@ final class LocalStore {
     }
 
     /// 設定「データの初期化」。端末の中の記録と設定をすべて消す（2026-11-26 にユーザーが決定）。
+    /// ランキングの自分の最高記録と送り直し待ちのスコア（`UserDefaultsRankingStore`）も消す。
     /// Game Center に送った記録は消えない。値を足したら `Key.all` にも足す
     func resetAll() {
-        for key in Key.all {
+        for key in Key.all + UserDefaultsRankingStore.allKeys {
             defaults.removeObject(forKey: key)
         }
         hasAcknowledgedSafetyNotice = false
