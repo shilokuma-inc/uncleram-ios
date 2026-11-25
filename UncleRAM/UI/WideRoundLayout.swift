@@ -60,7 +60,8 @@ struct WideRoundLayout: View {
                     .resizable()
                     .scaledToFill()
                     .frame(maxWidth: .infinity)
-                    .frame(height: 300)
+                    // 文字を大きくすると（Dynamic Type）会長の欄が伸びるので、その分だけ絵を低くして 1 画面に収める
+                    .frame(minHeight: 160, maxHeight: 300)
                     .clipped()
                     .allowsHitTesting(false)
                     .overlay(alignment: .bottom) {
@@ -131,8 +132,14 @@ struct WideRoundLayout: View {
     private var rightColumn: some View {
         VStack(spacing: 16) {
             VStack(spacing: 6) {
-                Airship(stage: engine.hintStage, baseSize: CGSize(width: 200, height: 150), showsLabel: false)
-                    .frame(height: 210)
+                // 文字を大きくすると明細が伸びるので、その分だけ飛行船の欄を低くする。
+                // 飛行船は、警告（3 段階目）で 1.3 倍になっても欄に収まる大きさにする
+                GeometryReader { proxy in
+                    let height = min(150, proxy.size.height / 1.3)
+                    Airship(stage: engine.hintStage, baseSize: CGSize(width: height * 4 / 3, height: height), showsLabel: false)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                .frame(minHeight: 90, maxHeight: 210)
                 HintIndicator(stage: ChairmanLines.displayedStage(engine), fontSize: 13)
             }
             .padding(.vertical, 14)
