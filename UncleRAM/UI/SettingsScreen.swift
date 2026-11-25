@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// 設定（docs/SPEC.md「初回起動と設定」）。今の版で働く先がある項目だけを置く。
-/// 振動（iPhone）・回収演出を控えめにする・使い方をもう一度見るは、振動・回収演出（#30）・吹き出し（#23）を入れるときに足す。
+/// 振動（iPhone）・回収演出を控えめにするは、振動・回収演出（#30）を入れるときに足す。
 /// BGM と効果音の音量・購入を復元・翻訳の誤りを報告は段取り 4、プライバシーポリシーとサポートは紹介ページができたら足す
 struct SettingsScreen: View {
     let onClose: () -> Void
@@ -11,6 +11,8 @@ struct SettingsScreen: View {
     @Environment(LocalStore.self) private var store
     @State private var page: Page?
     @State private var confirmsReset = false
+    /// 「使い方をもう一度見る」を押したあとに出す一言
+    @State private var restoredTutorial = false
 
     enum Page {
         case memoryUsage
@@ -92,6 +94,23 @@ struct SettingsScreen: View {
                 // Mac の既定はチェックボックスなので、iPhone と同じスイッチにそろえる
                 .toggleStyle(.switch)
                 .tint(Theme.red)
+                DashedRule()
+                Button {
+                    store.seenTutorialBubbles = []
+                    restoredTutorial = true
+                } label: {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("使い方をもう一度見る")
+                            .scaledFont(.mincho(16))
+                        Text(restoredTutorial ? "次のラウンドから、会長の吹き出しをもう一度出します。" : "会長の吹き出しを、最初の 1 回と同じようにもう一度出します。")
+                            .scaledFont(.mincho(13, .medium))
+                            .foregroundStyle(Theme.subText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
             }
             section("資料") {
                 pageLink("メモリの使い方について") { page = .memoryUsage }
