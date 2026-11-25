@@ -165,12 +165,12 @@ struct UnavailableNotice: View {
                 Text("いまは空きメモリが足りません")
                     .font(Theme.mincho(17))
                 Text("枠 \(Formatters.megabytes(bytes)) MB。ほかのアプリを閉じてから、もう一度お試しください。")
-                    .font(Theme.mincho(13, bold: false))
+                    .font(Theme.mincho(13, .medium))
             case .thermal:
                 Text("データセンターも大変なんです")
                     .font(Theme.mincho(17))
                 Text("端末が熱くなっています。少し休んでから、もう一度お試しください。")
-                    .font(Theme.mincho(13, bold: false))
+                    .font(Theme.mincho(13, .medium))
             }
         }
         .multilineTextAlignment(.center)

@@ -70,6 +70,11 @@ jobs:
           "$swiftlint" version
           "$swiftlint" lint --strict --reporter github-actions-logging
 
+      - name: Check font characters
+        # 同梱した日本語の書体は、文言に出てくる文字だけに絞っている（Tools/fonts/subset.py）。
+        # 文言に新しい文字が増えたのに書体を作り直していなければ止める（足りない文字は OS の書体で出てしまうため）
+        run: python3 Tools/fonts/subset.py --check
+
       - name: Build and test on iOS Simulator
         # UI テストは共有ランナー上で起動待ちに失敗することがあるため、失敗したテストだけ 1 回再試行する
         # （-test-iterations は初回を含む実行回数の上限）。

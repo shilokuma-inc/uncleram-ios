@@ -1,10 +1,11 @@
+import CoreText
 import SwiftUI
 
 /// 色と書体。docs/HANDOFF.md「デザインの実装メモ」。
 ///
-/// 書体は試作では OS に入っているもので代わりにしている（数字と英字の見出し: システムの Black、タイプライター風: Courier New、
-/// 日本語の本文: ヒラギノ明朝）。Google Fonts の書体（Archivo Black・Courier Prime・Shippori Mincho B1 など）は、
-/// 使う文字に絞って同梱する段取り（速達便が遊べる版）で入れる。
+/// 書体は `UncleRAM/Fonts/` に同梱し、Info.plist（iOS は `UIAppFonts`、Mac は `ATSApplicationFontsPath`）で読み込む。
+/// 日本語の書体は文言に出てくる文字だけに絞ってあるので、文言を変えたら `uv run Tools/fonts/subset.py` で作り直す
+/// （足りない文字は FontTests が見つける）。
 enum Theme {
     /// 紙
     static let paper = Color(hex: 0xEDE4CF)
@@ -19,19 +20,53 @@ enum Theme {
     /// 青（ずれの色）
     static let blue = Color(hex: 0x3D5A99)
 
-    /// 数字と英字の見出し（Archivo Black の代わり）
+    /// 日本語の本文の太さ。デザインは Shippori Mincho B1 の 500・700・800 を使う
+    nonisolated enum MinchoWeight: CaseIterable {
+        /// 500。説明や注記
+        case medium
+        /// 700。ふつうの本文と見出し
+        case bold
+        /// 800。ボタン・判子・合計など、いちばん強く見せるところ
+        case extraBold
+
+        var postScriptName: String {
+            switch self {
+            case .medium: "ShipporiMinchoB1-Medium"
+            case .bold: "ShipporiMinchoB1-Bold"
+            case .extraBold: "ShipporiMinchoB1-ExtraBold"
+            }
+        }
+    }
+
+    /// 数字と英字の見出し（Archivo Black）
     static func display(_ size: CGFloat) -> Font {
-        .system(size: size, weight: .black)
+        .custom(FontName.archivoBlack, fixedSize: size)
     }
 
-    /// タイプライター風の値（Courier Prime の代わり）
+    /// タイプライター風の値（Courier Prime の Bold）。Courier Prime に無い和文の文字は、
+    /// デザイン（`'Courier Prime', 'Shippori Mincho B1'`）と同じく Shippori Mincho B1 の Bold で出す
     static func typewriter(_ size: CGFloat) -> Font {
-        .custom("CourierNewPS-BoldMT", fixedSize: size)
+        Font(cascading(FontName.courierPrimeBold, fallback: MinchoWeight.bold.postScriptName, size: size))
     }
 
-    /// 日本語の本文（Shippori Mincho B1 の代わり）
-    static func mincho(_ size: CGFloat, bold: Bool = true) -> Font {
-        .custom(bold ? "HiraMinProN-W6" : "HiraMinProN-W3", fixedSize: size)
+    /// 日本語の本文（Shippori Mincho B1）
+    static func mincho(_ size: CGFloat, _ weight: MinchoWeight = .bold) -> Font {
+        .custom(weight.postScriptName, fixedSize: size)
+    }
+
+    /// 同梱した書体の PostScript 名
+    nonisolated enum FontName {
+        static let archivoBlack = "ArchivoBlack-Regular"
+        static let courierPrimeBold = "CourierPrime-Bold"
+    }
+
+    /// `name` に無い文字を `fallback` で出す書体（指定しないと、OS の書体で出てしまう）
+    private static func cascading(_ name: String, fallback: String, size: CGFloat) -> CTFont {
+        let attributes: [CFString: Any] = [
+            kCTFontNameAttribute: name,
+            kCTFontCascadeListAttribute: [CTFontDescriptorCreateWithNameAndSize(fallback as CFString, size)]
+        ]
+        return CTFontCreateWithFontDescriptor(CTFontDescriptorCreateWithAttributes(attributes as CFDictionary), size, nil)
     }
 }
 

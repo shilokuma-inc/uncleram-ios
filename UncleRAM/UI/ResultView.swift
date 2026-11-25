@@ -96,12 +96,12 @@ struct ResultView: View {
         if outcome.isSuccessful {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text("あと")
-                    .font(Theme.mincho(15))
+                    .font(Theme.mincho(15, .extraBold))
                 Text(verbatim: "\(gap)%")
                     .font(Theme.display(40))
                     .foregroundStyle(Theme.red)
                 Text(verbatim: "！")
-                    .font(Theme.mincho(15))
+                    .font(Theme.mincho(15, .extraBold))
             }
         } else {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
@@ -109,7 +109,7 @@ struct ResultView: View {
                     .font(Theme.display(40))
                     .foregroundStyle(Theme.red)
                 Text("越えた")
-                    .font(Theme.mincho(15))
+                    .font(Theme.mincho(15, .extraBold))
             }
         }
     }
@@ -155,7 +155,7 @@ struct ResultView: View {
             DashedRule()
             HStack(alignment: .firstTextBaseline) {
                 Text("スコア")
-                    .font(Theme.mincho(17))
+                    .font(Theme.mincho(17, .extraBold))
                 Spacer()
                 Text(verbatim: "\(Formatters.integer(outcome.score)) pt")
                     .font(Theme.display(34))
@@ -186,7 +186,7 @@ struct ResultView: View {
     private var retryButton: some View {
         Button(action: onRetry) {
             Text("もう一度献上する")
-                .font(Theme.mincho(20))
+                .font(Theme.mincho(20, .extraBold))
                 .tracking(4)
                 .foregroundStyle(Theme.lightPaper)
                 .frame(maxWidth: .infinity)
@@ -239,11 +239,11 @@ struct RevealGauge: View {
     private func marker(text: LocalizedStringKey, symbol: String, color: Color, above: Bool) -> some View {
         VStack(spacing: 2) {
             if above {
-                Text(text).font(Theme.mincho(13))
+                Text(text).font(Theme.mincho(13, .extraBold))
                 Text(verbatim: symbol).font(.system(size: 12))
             } else {
                 Text(verbatim: symbol).font(.system(size: 12))
-                Text(text).font(Theme.mincho(13))
+                Text(text).font(Theme.mincho(13, .extraBold))
             }
         }
         .foregroundStyle(color)

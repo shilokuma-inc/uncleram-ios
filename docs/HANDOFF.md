@@ -201,7 +201,7 @@
   | 欧文の本文（英語ほか） | Libre Caslon Text |
   | 韓国語・中国語 | 明朝体（Noto Serif TC / SC など） |
 
-  アプリに入れるときは、使う文字だけに絞ります。
+  アプリに入れるときは、使う文字だけに絞ります（`Tools/fonts/subset.py`。文言に新しい文字が増えたら回し直し、CI の `--check` で回し忘れを止めます）。2026-11-26 の時点で入れたのは、Archivo Black・Courier Prime の Bold・Shippori Mincho B1 の 500・700・800 です。Dela Gothic One は回収演出、Libre Caslon Text は英語を入れるときに足します。5 つとも Reserved Font Name はありません。
 - **素材:** [assets/images/](assets/images/) は加工済みの網点と紙と飾り罫、[assets/source/](assets/source/) は元の画像、[tools/](tools/) は加工のスクリプト（PIL）です。アプリで使う解像度が足りなければ、元画像から作り直してください。
 - **画面の大きさ:** iPhone のデザインは 390 × 844、Mac は 1200 × 760 です。
 - **守ること（審査 1.1.6 / 2.5.8 / 2.5.9）:**

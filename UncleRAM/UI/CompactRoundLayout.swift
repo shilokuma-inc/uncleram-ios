@@ -92,7 +92,7 @@ struct DonationReadout: View {
                     Text(budgetNote)
                 }
             }
-            .font(Theme.mincho(footnoteSize, bold: false))
+            .font(Theme.mincho(footnoteSize, .medium))
             .foregroundStyle(Theme.subText)
             .padding(.top, 14)
         }
@@ -129,7 +129,7 @@ struct PriceFooter: View {
                 Text(verbatim: price.changeNote)
                     .foregroundStyle(Theme.red)
             }
-            .font(Theme.mincho(compact ? 10 : 11, bold: false))
+            .font(Theme.mincho(compact ? 10 : 11, .medium))
         }
     }
 }
