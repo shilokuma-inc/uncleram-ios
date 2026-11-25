@@ -13,6 +13,8 @@ struct RoundScreen: View {
     @State private var coach = TutorialCoach()
     /// 「?」から開く遊び方の 3 コマ
     @State private var showsHowToPlay = false
+    /// 効果音を鳴らすきっかけ（計測のときは鳴らさない）
+    @State private var sounds: RoundSounds
     @Environment(\.scenePhase) private var scenePhase
     @Environment(LocalStore.self) private var store: LocalStore?
     /// ランキングに送る。撮影モードやプレビューなど、AppRoot の外では無い
@@ -32,6 +34,7 @@ struct RoundScreen: View {
         _engine = State(initialValue: engine)
         _monitor = State(initialValue: RoundEventMonitor(engine: engine))
         _bench = State(initialValue: BenchRunner(engine: engine))
+        _sounds = State(initialValue: RoundSounds(engine: engine))
     }
 
     var body: some View {
@@ -76,8 +79,10 @@ struct RoundScreen: View {
             // 画面が消えたら（Mac でウィンドウを閉じたときなど）、計測も止める。止めないと、画面も監視も無いまま確保を続けてしまう
             bench.cancel()
             monitor.stop()
+            sounds.stopAll()
         }
         .onChange(of: engine.hintStage) { _, stage in
+            sounds.hintStageChanged(to: stage)
             if let bubble = TutorialBubble.forHintStage(stage), !engine.isAutomated {
                 coach.reveal(bubble)
             }
@@ -103,6 +108,7 @@ struct RoundScreen: View {
         }
         .onChange(of: engine.phase) { _, phase in
             recordDaily(phase)
+            sounds.phaseChanged(to: phase)
             guard case let .result(outcome) = phase else {
                 // 結果の段階を出たら（次のラウンド・タイトル）、回収演出の「結果を見る」を戻す
                 revealsResult = false
@@ -202,6 +208,7 @@ struct RoundScreen: View {
                 onRetry: { engine.reset() },
                 onExit: onExit
             )
+            .onAppear { sounds.resultAppeared(outcome) }
         default:
             if wide {
                 WideRoundLayout(engine: engine, bench: bench) { showsHowToPlay = true }

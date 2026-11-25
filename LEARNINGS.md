@@ -27,6 +27,12 @@
 - Mac でアドホック署名（`CODE_SIGN_IDENTITY=-`・`CODE_SIGN_STYLE=Manual`・プロファイルなし）すると、`com.apple.developer.game-center` の権限があるだけで「requires a provisioning profile」でビルドが止まる。CI の Mac のテストとアーカイブはアドホック署名なので、権限は今は iOS だけ（`CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]`・`[sdk=iphonesimulator*]`）に付けている（2026-11-24）
 - 「Push to App Store Connect」をすると、Xcode が `gameCenterResources.json` を自分の書き方（キーの並び・`/` を `\/` にする）で書き直す。中身は変わらない。差分が出ないよう、リポジトリの JSON は Xcode の書き方にそろえてある。手で直したあとに Push すると、また書き直されるので、Push のあとの差分もコミットする（2026-11-26）
 
+## 音
+
+- afconvert で作った AAC（`.m4a`）は、エンコーダーの頭の遅れ（priming 2112 フレーム）と終わりの余り（remainder）を持つ。AVAudioFile でデコードすると元の長さとフレーム数まで一致し、AVAudioPlayer の `numberOfLoops = -1` でも継ぎ目が出ない。ループさせる音（BGM を含む）も AAC でよい。`afinfo` の「valid frames + priming + remainder」で確かめられる（2026-11-26）
+- AVAudioPlayer の `play(atTime:)` で遅らせて鳴らす予定は、鳴る前に `stop()` すれば取り消せる（2026-11-26、macOS で確かめた）
+- Freesound の音は、元のファイルを取るにはログイン（API なら OAuth）が要るが、試聴用の MP3（`https://cdn.freesound.org/previews/<ID の上 3 桁>/<ID>_<作者の ID>-hq.mp3`、128kbps）はログインなしで取れる。URL は音のページに書いてある。検索は `https://freesound.org/search/?q=<語>&f=license:"Creative Commons 0"` で CC0 に絞れるが、ライセンスは音ごとのページ（`creativecommons.org/publicdomain/zero/1.0/` へのリンク）でも確かめる（2026-11-26）
+
 ## 仕様と試算
 
 - 引き継ぎの `Tools/sim.py` は、警告（3 段階目）を「手前 3%・±1.5」で試算していた。SPEC.md の値（手前 2%・±2%）で回すと、SPEC.md の試算の表（警告で離す: 期待値 87・回収 54%）が再現するので、SPEC.md の値に合わせた。仕様の数値を変えたら、表と sim.py の両方を見直す（2026-11-12）
