@@ -9,6 +9,11 @@ import SwiftUI
 
 @main
 struct UncleRAM: App {
+    init() {
+        // 効果音は起動の時に読み込む。ラウンドの枠を量るより前に済ませる（docs/SPEC.md「音と振動」）
+        SoundBank.shared.load()
+    }
+
     var body: some Scene {
         #if os(macOS)
         // Mac はウィンドウを 1 つに限る（docs/SPEC.md「ラウンドの状態と中断」）
