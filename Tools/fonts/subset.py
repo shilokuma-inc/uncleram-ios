@@ -43,6 +43,7 @@ FONTS = [
     ("shipporiminchob1/ShipporiMinchoB1-Medium.ttf", "0712348124729e30507a9ed9d7c8939125f13605954596acfe0ec4a6341e3b9d", True),
     ("shipporiminchob1/ShipporiMinchoB1-Bold.ttf", "d20f3981afb8bceda5fdf8f0fb29ba51eb21518644612ccd8a183e5bd433e25a", True),
     ("shipporiminchob1/ShipporiMinchoB1-ExtraBold.ttf", "bee99a242f32128e8d6a4acff2b3f1742cd42ea90748758e6e10456871887e76", True),
+    ("delagothicone/DelaGothicOne-Regular.ttf", "4ff87a0965f1b0505e5a2c58424bc6ad3cff27e56a82f21c2fc9d6b0e3857ee2", True),
 ]
 
 # (google/fonts の ofl/ からのパス, SHA-256, アプリに入れる名前)
@@ -50,6 +51,7 @@ LICENSES = [
     ("archivoblack/OFL.txt", "3173acd82f8c6159b5b1037b539fcbd4edff68e65c2ea8b9412b5a5ca97b08ff", "OFL-ArchivoBlack.txt"),
     ("courierprime/OFL.txt", "9a755af092b494944c99f471be6fddd19b006a448fefdc4717e4ee0aa09a97b0", "OFL-CourierPrime.txt"),
     ("shipporiminchob1/OFL.txt", "41fba056279be5f45ff9a99e44b7b53897b42732f5806d8e666e0ab49ac6bd38", "OFL-ShipporiMinchoB1.txt"),
+    ("delagothicone/OFL.txt", "c0014792d4f4abc0508c295b277f2b17ae44465c8dc88d12af9cea48279b5fda", "OFL-DelaGothicOne.txt"),
 ]
 
 

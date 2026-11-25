@@ -47,18 +47,14 @@ enum ChairmanGreeting: Equatable {
     /// 「上客様がお見えです」
     case honored
 
-    /// ランキングのメモリのクラスでいちばん小さいとき（iPhone・iPad は 8GB 以下、Mac は 16GB 以下）は modest、
+    /// ランキングのメモリのクラス（`MemoryClass`）でいちばん小さいとき（iPhone・iPad は 8GB 以下、Mac は 18GB 以下）は modest、
     /// それより大きいときは honored（2026-11-26 にユーザーが決定）
-    static func forInstalledMemory(gigabytes: Int, isMac: Bool) -> ChairmanGreeting {
-        gigabytes <= (isMac ? 16 : 8) ? .modest : .honored
+    static func forProfile(_ profile: DeviceMemoryProfile) -> ChairmanGreeting {
+        profile.memoryClass.tier == 1 ? .modest : .honored
     }
 
     static var current: ChairmanGreeting {
-        #if os(macOS)
-        forInstalledMemory(gigabytes: DeviceDescription.installedGigabytes, isMac: true)
-        #else
-        forInstalledMemory(gigabytes: DeviceDescription.installedGigabytes, isMac: false)
-        #endif
+        forProfile(.current)
     }
 
     var line: LocalizedStringKey {
