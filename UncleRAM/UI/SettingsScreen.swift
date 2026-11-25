@@ -222,7 +222,7 @@ private struct MemoryUsagePage: View {
     }
 }
 
-/// 設定「ライセンス」。書体（OFL）と画像の出典（docs/HANDOFF.md「素材の出典とライセンス」）
+/// 設定「ライセンス」。書体（OFL）と、画像と効果音の出典（docs/HANDOFF.md「素材の出典とライセンス」）
 private struct LicensesPage: View {
     private struct Font: Identifiable {
         let name: String
@@ -230,7 +230,7 @@ private struct LicensesPage: View {
         var id: String { name }
     }
 
-    private struct ImageSource: Identifiable {
+    private struct Source: Identifiable {
         let use: LocalizedStringKey
         let source: String
         let license: LocalizedStringKey
@@ -244,39 +244,38 @@ private struct LicensesPage: View {
     ]
 
     private static let images = [
-        ImageSource(use: "紙の背景", source: "Annie Spratt / Unsplash", license: "Unsplash License"),
-        ImageSource(use: "飾り罫", source: "Ludvig S. Ipsen, Desk Book of Type, 1900 (Wikimedia Commons)", license: "パブリックドメイン"),
-        ImageSource(use: "サーバーの網点", source: "Tony Marinescu / Unsplash", license: "Unsplash License"),
-        ImageSource(
+        Source(use: "紙の背景", source: "Annie Spratt / Unsplash", license: "Unsplash License"),
+        Source(use: "飾り罫", source: "Ludvig S. Ipsen, Desk Book of Type, 1900 (Wikimedia Commons)", license: "パブリックドメイン"),
+        Source(use: "サーバーの網点", source: "Tony Marinescu / Unsplash", license: "Unsplash License"),
+        Source(
             use: "工場の網点",
             source: "Detroit Publishing Co., Homestead Steel Works, c. 1900 (Library of Congress)",
             license: "パブリックドメイン"
         ),
-        ImageSource(
+        Source(
             use: "指差す手・シルクハット",
             source: "J. M. Flagg, I Want You for U.S. Army, 1917 (Library of Congress)",
             license: "パブリックドメイン"
         ),
-        ImageSource(use: "回収飛行船", source: "Bain News Service, German dirigible, 1910 (Library of Congress)", license: "パブリックドメイン")
+        Source(use: "回収飛行船", source: "Bain News Service, German dirigible, 1910 (Library of Congress)", license: "パブリックドメイン")
+    ]
+
+    /// 効果音（Freesound の CC0。`Tools/sounds/make_sounds.py` の `SOURCES` とそろえる）
+    private static let sounds = [
+        Source(use: "回収飛行船のプロペラ", source: "ilm0player, Airship propeller engine (Freesound)", license: "CC0 1.0"),
+        Source(use: "納品の判子", source: "kermite607, Stamp (Freesound)", license: "CC0 1.0"),
+        Source(use: "納品のベル", source: "ramsamba, Typewriter Bell (Freesound)", license: "CC0 1.0"),
+        Source(use: "回収の汽笛", source: "Bidone, Steam Whistle (Freesound)", license: "CC0 1.0"),
+        Source(use: "明細書の印字", source: "escritor1, Typewriter Typing (Freesound)", license: "CC0 1.0")
     ]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             panel("画像") {
-                ForEach(Self.images) { image in
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(image.use)
-                            .scaledFont(.mincho(14))
-                        Text(verbatim: image.source)
-                            .scaledFont(.mincho(13, .medium))
-                            .foregroundStyle(Theme.subText)
-                            .fixedSize(horizontal: false, vertical: true)
-                        Text(image.license)
-                            .scaledFont(.mincho(12, .medium))
-                            .foregroundStyle(Theme.subText)
-                    }
-                    .accessibilityElement(children: .combine)
-                }
+                ForEach(Self.images, content: sourceRow)
+            }
+            panel("効果音") {
+                ForEach(Self.sounds, content: sourceRow)
             }
             panel("書体（SIL Open Font License 1.1）") {
                 ForEach(Self.fonts) { font in
@@ -295,6 +294,22 @@ private struct LicensesPage: View {
                 }
             }
         }
+    }
+
+    /// 用途・出典（作者 / サイト）・ライセンス
+    private func sourceRow(_ source: Source) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(source.use)
+                .scaledFont(.mincho(14))
+            Text(verbatim: source.source)
+                .scaledFont(.mincho(13, .medium))
+                .foregroundStyle(Theme.subText)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(source.license)
+                .scaledFont(.mincho(12, .medium))
+                .foregroundStyle(Theme.subText)
+        }
+        .accessibilityElement(children: .combine)
     }
 
     private func panel(_ title: LocalizedStringKey, @ViewBuilder content: () -> some View) -> some View {
