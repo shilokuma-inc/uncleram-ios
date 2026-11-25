@@ -20,7 +20,9 @@ struct CompactRoundLayout: View {
                 stage: ChairmanLines.displayedStage(engine),
                 leaning: ChairmanLines.isLeaning(engine)
             )
+            .tutorialBubble([.sign, .bluff], alignment: .bottomTrailing, offset: CGSize(width: -12, height: 18))
             DonationReadout(engine: engine, numberSize: isShort ? 46 : 58, unitSize: isShort ? 16 : 20)
+                .tutorialBubble([.warning], alignment: .topTrailing, offset: CGSize(width: 0, height: -6))
             // ボタンは残りの高さに収める。文字を大きくすると（Dynamic Type）上の欄が伸びるので、その分ボタンが縮む
             GeometryReader { proxy in
                 ZStack(alignment: .topTrailing) {
@@ -29,11 +31,17 @@ struct CompactRoundLayout: View {
                             UnavailableNotice(reason: reason)
                         } else {
                             HoldButton(engine: engine, diameter: buttonDiameter(fitting: proxy.size.height))
+                                .tutorialBubble([.releaseToDeliver], alignment: .top, offset: CGSize(width: 0, height: -10))
                         }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    Airship(stage: engine.hintStage, baseSize: isShort ? Self.shortAirshipSize : Airship.defaultSize)
-                        .padding(.top, 2)
+                    Airship(
+                        stage: engine.hintStage,
+                        baseSize: isShort ? Self.shortAirshipSize : Airship.defaultSize,
+                        emphasized: engine.plan?.isPractice == true
+                    )
+                    .padding(.top, 2)
+                    .tutorialBubble([.approach], alignment: .bottomTrailing, offset: CGSize(width: 0, height: 30))
                 }
             }
             PriceFooter(engine: engine, compact: isShort)
@@ -71,6 +79,7 @@ struct CompactRoundLayout: View {
 /// 献上量の数字・ゲージ・回収ラインと枠。献上中は毎フレーム読み直す
 struct DonationReadout: View {
     let engine: RoundEngine
+    @Environment(TutorialCoach.self) private var coach: TutorialCoach?
     var numberSize: CGFloat = 58
     var unitSize: CGFloat = 20
     var gaugeHeight: CGFloat = 22
@@ -94,6 +103,12 @@ struct DonationReadout: View {
                             .font(Theme.display(unitSize))
                     }
                     DonationGauge(fill: engine.donatedFill, safetyLine: engine.safetyLineFill, height: gaugeHeight, client: engine.client)
+                }
+                // 献上量は毎フレーム読み直すので、ここ（献上中だけ動く TimelineView の中）で 20% を越えたかを見る
+                .onChange(of: engine.phase == .donating && engine.donatedFill >= TutorialBubble.releaseHintFill) { _, reached in
+                    if reached, !engine.isAutomated {
+                        coach?.reveal(.releaseToDeliver)
+                    }
                 }
             }
             HStack(spacing: 12) {

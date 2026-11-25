@@ -322,9 +322,11 @@ struct Airship: View {
     let stage: RoundPlan.HintStage
     var baseSize = Airship.defaultSize
     var showsLabel = true
+    /// 練習ラウンドでは兆しを大きく出す（近づいたときに、いつもより大きくする）
+    var emphasized = false
 
     private var scale: CGFloat {
-        switch stage {
+        let base: CGFloat = switch stage {
         case .none, .sign:
             1
         case .approach:
@@ -332,6 +334,7 @@ struct Airship: View {
         case .warning:
             1.3
         }
+        return emphasized && stage >= .approach ? base * 1.15 : base
     }
 
     var body: some View {
@@ -355,6 +358,8 @@ struct Airship: View {
 /// 警告（3 段階目）の画面のノイズ。インクがかすれたような横の帯を走らせる（OS の画面には似せない）。
 /// 「視差効果を減らす」が有効なときは、動かさずに紙の汚れのように止めて見せる（docs/SPEC.md「アクセシビリティ」）
 struct InkNoise: View {
+    /// 濃さの倍率。練習ラウンドでは兆しを大きく出すため濃くする
+    var intensity = 1.0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -370,7 +375,7 @@ struct InkNoise: View {
                     let color = generator.chance(0.7) ? Theme.navy : Theme.red
                     context.fill(
                         Path(CGRect(x: x, y: y, width: width, height: height)),
-                        with: .color(color.opacity(generator.uniform(0.05...0.18)))
+                        with: .color(color.opacity(min(1, generator.uniform(0.05...0.18) * intensity)))
                     )
                 }
             }

@@ -8,7 +8,9 @@ final class LocalStore {
     private enum Key {
         static let hasAcknowledgedSafetyNotice = "hasAcknowledgedSafetyNotice"
         static let tapToDonate = "tapToDonate"
-        static let all = [hasAcknowledgedSafetyNotice, tapToDonate]
+        static let hasCompletedFirstRound = "hasCompletedFirstRound"
+        static let seenTutorialBubbles = "seenTutorialBubbles"
+        static let all = [hasAcknowledgedSafetyNotice, tapToDonate, hasCompletedFirstRound, seenTutorialBubbles]
     }
 
     @ObservationIgnored private let defaults: UserDefaults
@@ -24,10 +26,22 @@ final class LocalStore {
         didSet { defaults.set(tapToDonate, forKey: Key.tapToDonate) }
     }
 
+    /// 最初の 1 回（練習ラウンド）を終えたか。終えるまでは練習ラウンドにする（無効になったラウンドは数えない）
+    var hasCompletedFirstRound: Bool {
+        didSet { defaults.set(hasCompletedFirstRound, forKey: Key.hasCompletedFirstRound) }
+    }
+
+    /// 一度見せた吹き出し（`TutorialBubble` の rawValue）。設定「使い方をもう一度見る」で空にする
+    var seenTutorialBubbles: Set<String> {
+        didSet { defaults.set(seenTutorialBubbles.sorted(), forKey: Key.seenTutorialBubbles) }
+    }
+
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         hasAcknowledgedSafetyNotice = defaults.bool(forKey: Key.hasAcknowledgedSafetyNotice)
         tapToDonate = defaults.bool(forKey: Key.tapToDonate)
+        hasCompletedFirstRound = defaults.bool(forKey: Key.hasCompletedFirstRound)
+        seenTutorialBubbles = Set(defaults.stringArray(forKey: Key.seenTutorialBubbles) ?? [])
     }
 
     /// 設定「データの初期化」。端末の中の記録と設定をすべて消す（2026-11-26 にユーザーが決定）。
@@ -38,5 +52,7 @@ final class LocalStore {
         }
         hasAcknowledgedSafetyNotice = false
         tapToDonate = false
+        hasCompletedFirstRound = false
+        seenTutorialBubbles = []
     }
 }

@@ -9,6 +9,8 @@ struct RoundScreen: View {
     @State private var engine: RoundEngine
     @State private var monitor: RoundEventMonitor
     @State private var bench: BenchRunner
+    /// 最初の 1 回で覚えることの吹き出し
+    @State private var coach = TutorialCoach()
     @Environment(\.scenePhase) private var scenePhase
     @Environment(LocalStore.self) private var store: LocalStore?
     /// 結果からタイトルへ戻る。nil のときは「タイトルへ」を出さない
@@ -28,7 +30,8 @@ struct RoundScreen: View {
                 PaperBackground(wide: wide)
                 content(wide: wide, size: proxy.size)
                 if engine.hintStage == .warning, engine.phase == .donating {
-                    InkNoise().ignoresSafeArea()
+                    // 練習ラウンドでは兆しを大きく出す（ノイズを濃くする）
+                    InkNoise(intensity: engine.plan?.isPractice == true ? 1.6 : 1).ignoresSafeArea()
                 }
             }
         }
@@ -36,11 +39,17 @@ struct RoundScreen: View {
             BenchStatusBar(bench: bench)
         }
         .preferredColorScheme(.light)
+        .environment(coach)
         .onAppear {
             if let scene = ScreenshotDemo.scene {
                 engine.showDemo(scene)
                 return
             }
+            // 計測で起動したときは、吹き出しを出さず、練習ラウンドにもしない
+            if !BenchRunner.isRequestedByLaunchArguments {
+                coach.store = store
+            }
+            engine.isPracticeRound = !(store?.hasCompletedFirstRound ?? true)
             monitor.tapToDonate = store?.tapToDonate ?? false
             monitor.start()
             bench.startFromLaunchArgumentsIfNeeded()
@@ -49,6 +58,31 @@ struct RoundScreen: View {
             // 画面が消えたら（Mac でウィンドウを閉じたときなど）、計測も止める。止めないと、画面も監視も無いまま確保を続けてしまう
             bench.cancel()
             monitor.stop()
+        }
+        .onChange(of: engine.hintStage) { _, stage in
+            if let bubble = TutorialBubble.forHintStage(stage), !engine.isAutomated {
+                coach.reveal(bubble)
+            }
+        }
+        .onChange(of: engine.bluff) { _, bluff in
+            if bluff == .grinning, !engine.isAutomated {
+                coach.reveal(.bluff)
+            }
+        }
+        .onChange(of: engine.phase) { _, phase in
+            guard case let .result(outcome) = phase else {
+                return
+            }
+            coach.dismiss()
+            // 練習ラウンドを終えたら、次から普段のラウンドにする（無効になったときは、もう一度練習にする）
+            let voided = if case .voided = outcome.kind { true } else { false }
+            if outcome.plan.isPractice, !voided {
+                store?.hasCompletedFirstRound = true
+            }
+            engine.isPracticeRound = !(store?.hasCompletedFirstRound ?? true)
+            if outcome.kind == .collected, outcome.plan.isEarlyCollection, !engine.isAutomated {
+                coach.reveal(.earlyCollection)
+            }
         }
         .onChange(of: scenePhase) { _, phase in
             switch phase {

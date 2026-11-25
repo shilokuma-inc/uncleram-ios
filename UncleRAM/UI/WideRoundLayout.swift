@@ -56,6 +56,7 @@ struct WideRoundLayout: View {
                 leaning: ChairmanLines.isLeaning(engine),
                 showsIndicator: false
             )
+            .tutorialBubble([.sign, .bluff], alignment: .topTrailing, offset: CGSize(width: 24, height: -18))
         }
     }
 
@@ -69,11 +70,13 @@ struct WideRoundLayout: View {
                 footnoteSize: 13,
                 budgetNote: budgetNote
             )
+            .tutorialBubble([.warning], alignment: .topTrailing, offset: CGSize(width: 0, height: -6))
             VStack(spacing: 18) {
                 if case let .unavailable(reason) = engine.phase {
                     UnavailableNotice(reason: reason)
                 } else {
                     HoldButton(engine: engine, diameter: 236)
+                        .tutorialBubble([.releaseToDeliver], alignment: .top, offset: CGSize(width: 0, height: -12))
                 }
                 #if os(macOS)
                 HStack(spacing: 10) {
@@ -96,13 +99,20 @@ struct WideRoundLayout: View {
         VStack(spacing: 16) {
             VStack(spacing: 6) {
                 // 文字を大きくすると明細が伸びるので、その分だけ飛行船の欄を低くする。
-                // 飛行船は、警告（3 段階目）で 1.3 倍になっても欄に収まる大きさにする
+                // 飛行船は、警告（3 段階目）で大きくなっても欄に収まる大きさにする（練習ラウンドでは、さらに大きく出す）
                 GeometryReader { proxy in
-                    let height = min(150, proxy.size.height / 1.3)
-                    Airship(stage: engine.hintStage, baseSize: CGSize(width: height * 4 / 3, height: height), showsLabel: false)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    let emphasized = engine.plan?.isPractice == true
+                    let height = min(150, proxy.size.height / (emphasized ? 1.5 : 1.3))
+                    Airship(
+                        stage: engine.hintStage,
+                        baseSize: CGSize(width: height * 4 / 3, height: height),
+                        showsLabel: false,
+                        emphasized: emphasized
+                    )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 .frame(minHeight: 90, maxHeight: 210)
+                .tutorialBubble([.approach], alignment: .bottom, offset: CGSize(width: 0, height: 8))
                 HintIndicator(stage: ChairmanLines.displayedStage(engine), fontSize: 13)
             }
             .padding(.vertical, 14)
