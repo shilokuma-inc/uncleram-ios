@@ -35,7 +35,7 @@ struct WideRoundLayout: View {
             CorporateMasthead()
             Spacer()
             HStack(alignment: .firstTextBaseline, spacing: 28) {
-                Text("速達便")
+                Text(engine.isShowingPracticeRound ? "練習 · 速達便" : "速達便")
                     .scaledFont(.typewriter(12))
                     .tracking(1)
                     .foregroundStyle(Theme.subText)
@@ -56,7 +56,7 @@ struct WideRoundLayout: View {
                 leaning: ChairmanLines.isLeaning(engine),
                 showsIndicator: false
             )
-            .tutorialBubble([.sign, .bluff], alignment: .topTrailing, offset: CGSize(width: 24, height: -18))
+            .tutorialBubble([.sign, .bluff], edge: .top)
         }
     }
 
@@ -70,13 +70,13 @@ struct WideRoundLayout: View {
                 footnoteSize: 13,
                 budgetNote: budgetNote
             )
-            .tutorialBubble([.warning], alignment: .topTrailing, offset: CGSize(width: 0, height: -6))
+            .tutorialBubble([.warning], edge: .top, alignment: .trailing)
             VStack(spacing: 18) {
                 if case let .unavailable(reason) = engine.phase {
                     UnavailableNotice(reason: reason)
                 } else {
                     HoldButton(engine: engine, diameter: 236)
-                        .tutorialBubble([.releaseToDeliver], alignment: .top, offset: CGSize(width: 0, height: -12))
+                        .tutorialBubble([.releaseToDeliver], edge: .top, alignment: .center)
                 }
                 #if os(macOS)
                 HStack(spacing: 10) {
@@ -112,7 +112,7 @@ struct WideRoundLayout: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 .frame(minHeight: 90, maxHeight: 210)
-                .tutorialBubble([.approach], alignment: .bottom, offset: CGSize(width: 0, height: 8))
+                .tutorialBubble([.approach], edge: .bottom, alignment: .center)
                 HintIndicator(stage: ChairmanLines.displayedStage(engine), fontSize: 13)
             }
             .padding(.vertical, 14)

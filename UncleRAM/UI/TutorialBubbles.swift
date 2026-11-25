@@ -30,6 +30,14 @@ enum TutorialBubble: String, CaseIterable {
         }
     }
 
+    /// 吹き出しの下に小さく添える一言（docs/design/Tutorial.png の「＝ 回収ラインが近いかも」）
+    var caption: LocalizedStringKey? {
+        switch self {
+        case .sign: "＝ 回収ラインが近いかも"
+        default: nil
+        }
+    }
+
     /// VoiceOver で読み上げる文（`text` と同じ文言）
     var announcement: String {
         switch self {
@@ -95,39 +103,83 @@ final class TutorialCoach {
     }
 }
 
-/// 会長の吹き出し（紙の札に紺の影）
+/// 会長の吹き出し（docs/design/Tutorial.png）。紙の札に紺の影を付け、指し示す側に三角のしっぽを出す
 struct TutorialBubbleView: View {
     let bubble: TutorialBubble
+    /// しっぽを出す辺（吹き出しが部品の下にあるときは上、上にあるときは下）
+    var tailEdge: VerticalEdge = .top
+    var tailAlignment: HorizontalAlignment = .leading
 
     var body: some View {
-        Text(bubble.text)
-            .scaledFont(.mincho(14))
-            .foregroundStyle(Theme.navy)
-            .fixedSize()
-            .padding(.horizontal, 12)
-            .padding(.vertical, 7)
-            .background { InkSurface(color: Theme.lightPaper) }
-            .overlay { Rectangle().strokeBorder(Theme.navy, lineWidth: 1.5) }
-            .background {
-                Rectangle().fill(Theme.navy).offset(x: 3, y: 3)
+        VStack(alignment: .leading, spacing: 2) {
+            Text(bubble.text)
+                .scaledFont(.mincho(15, .extraBold))
+            if let caption = bubble.caption {
+                Text(caption)
+                    .scaledFont(.mincho(11))
+                    .foregroundStyle(Theme.subText)
             }
-            // 読み上げは TutorialCoach が出すときに 1 回だけ行う
-            .accessibilityHidden(true)
+        }
+        .foregroundStyle(Theme.navy)
+        .fixedSize()
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background { InkSurface(color: Theme.lightPaper) }
+        .overlay { Rectangle().strokeBorder(Theme.navy, lineWidth: 1.5) }
+        .overlay(alignment: Alignment(horizontal: tailAlignment, vertical: tailEdge == .top ? .top : .bottom)) {
+            tail
+        }
+        .background {
+            Rectangle().fill(Theme.navy).offset(x: 3, y: 3)
+        }
+        // 読み上げは TutorialCoach が出すときに 1 回だけ行う
+        .accessibilityHidden(true)
+    }
+
+    /// 紙の色の小さな四角を 45° 回し、外側の 2 辺だけに紺の線を引いたしっぽ（札の枠の上に重ねて、枠の線を隠す）
+    private var tail: some View {
+        TailShape()
+            .fill(Theme.lightPaper)
+            .overlay { TailShape(edgesOnly: true).stroke(Theme.navy, lineWidth: 1.5) }
+            .frame(width: 14, height: 7)
+            .rotationEffect(.degrees(tailEdge == .top ? 0 : 180))
+            .offset(y: tailEdge == .top ? -6.5 : 6.5)
+            .padding(.horizontal, tailAlignment == .center ? 0 : 22)
+    }
+}
+
+/// 上向きの三角（しっぽ）。edgesOnly なら、底辺を除く 2 辺だけ
+private struct TailShape: Shape {
+    var edgesOnly = false
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.midX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        if !edgesOnly {
+            path.closeSubpath()
+        }
+        return path
     }
 }
 
 extension View {
-    /// bubbles のどれかを出しているときだけ、この部品の横に吹き出しを重ねる（その兆しのすぐ横に一言）
-    func tutorialBubble(_ bubbles: Set<TutorialBubble>, alignment: Alignment, offset: CGSize = .zero) -> some View {
-        modifier(TutorialBubbleModifier(bubbles: bubbles, alignment: alignment, offset: offset))
+    /// bubbles のどれかを出しているときだけ、この部品のすぐ下（edge が .bottom）か上（.top）に吹き出しを出す
+    /// （その兆しのすぐ横に一言）。しっぽは部品のほうを向く
+    func tutorialBubble(_ bubbles: Set<TutorialBubble>, edge: VerticalEdge, alignment: HorizontalAlignment = .leading) -> some View {
+        modifier(TutorialBubbleModifier(bubbles: bubbles, edge: edge, horizontal: alignment))
     }
 }
 
 private struct TutorialBubbleModifier: ViewModifier {
     let bubbles: Set<TutorialBubble>
-    let alignment: Alignment
-    let offset: CGSize
+    let edge: VerticalEdge
+    let horizontal: HorizontalAlignment
     @Environment(TutorialCoach.self) private var coach: TutorialCoach?
+
+    /// 部品と吹き出しの間（しっぽの分）
+    nonisolated private static let gap: CGFloat = 10
 
     private var shown: TutorialBubble? {
         guard let current = coach?.current, bubbles.contains(current) else {
@@ -138,12 +190,18 @@ private struct TutorialBubbleModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .overlay(alignment: alignment) {
-                if let shown {
-                    TutorialBubbleView(bubble: shown)
-                        .offset(offset)
-                        .transition(.opacity.combined(with: .scale(scale: 0.9)))
-                        .allowsHitTesting(false)
+            .overlay(alignment: Alignment(horizontal: horizontal, vertical: edge == .bottom ? .bottom : .top)) {
+                ZStack {
+                    if let shown {
+                        TutorialBubbleView(bubble: shown, tailEdge: edge == .bottom ? .top : .bottom, tailAlignment: horizontal)
+                            .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                    }
+                }
+                .allowsHitTesting(false)
+                // 吹き出しの上の辺を部品の下の辺に（上に出すときは、下の辺を上の辺に）合わせる。
+                // 位置の指定は、出し入れ（transition）の外側に付けないと効かない
+                .alignmentGuide(edge == .bottom ? .bottom : .top) { dimension in
+                    edge == .bottom ? dimension[.top] - Self.gap : dimension[.bottom] + Self.gap
                 }
             }
             .animation(.easeOut(duration: 0.2), value: shown)
