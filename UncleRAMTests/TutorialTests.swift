@@ -90,6 +90,29 @@ struct TutorialTests {
         #expect(TutorialBubble.forHintStage(.warning) == .warning)
     }
 
+    /// 練習ラウンドを納品か回収で終えたら「練習を終えた」にし、無効になったら（納品のあとで無効に変わったときも）取り消す
+    @Test
+    func practiceCompletionFollowsOutcome() {
+        let practice = RoundPlan.practice(safetyLine: SafetyLine.budgetRatio)
+        func outcome(_ kind: RoundOutcome.Kind, plan: RoundPlan = practice) -> RoundOutcome {
+            RoundOutcome(kind: kind, plan: plan, budgetBytes: 1_000, donatedBytes: 300, stoppedAtSafetyLine: false)
+        }
+        #expect(RoundScreen.practiceCompletion(after: outcome(.delivered)) == true)
+        #expect(RoundScreen.practiceCompletion(after: outcome(.collected)) == true)
+        #expect(RoundScreen.practiceCompletion(after: outcome(.voided(.background))) == false)
+        var random = SplitMix64(seed: 1)
+        let normal = RoundPlan.make(client: .allocateCorp, safetyLine: SafetyLine.budgetRatio, random: &random)
+        #expect(RoundScreen.practiceCompletion(after: outcome(.voided(.background), plan: normal)) == nil)
+    }
+
+    /// タップで献上のときは、離しても納品しないので「もう一度押せば納品だ」と伝える
+    @Test
+    func releaseBubbleFollowsTapSetting() {
+        #expect(TutorialBubble.releaseToDeliver.announcement(tapToDonate: false) == String(localized: "離せば納品だ"))
+        #expect(TutorialBubble.releaseToDeliver.announcement(tapToDonate: true) == String(localized: "もう一度押せば納品だ"))
+        #expect(TutorialBubble.sign.announcement(tapToDonate: true) == TutorialBubble.sign.announcement(tapToDonate: false))
+    }
+
     /// データの初期化は、練習ラウンドを終えたことと、見た吹き出しも消す
     @Test
     func resetAllRestoresTutorial() throws {
