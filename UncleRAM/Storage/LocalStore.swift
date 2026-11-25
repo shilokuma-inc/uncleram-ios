@@ -10,7 +10,8 @@ final class LocalStore {
         static let tapToDonate = "tapToDonate"
         static let hasCompletedFirstRound = "hasCompletedFirstRound"
         static let seenTutorialBubbles = "seenTutorialBubbles"
-        static let all = [hasAcknowledgedSafetyNotice, tapToDonate, hasCompletedFirstRound, seenTutorialBubbles]
+        static let reducesCollectEffect = "reducesCollectEffect"
+        static let all = [hasAcknowledgedSafetyNotice, tapToDonate, hasCompletedFirstRound, seenTutorialBubbles, reducesCollectEffect]
     }
 
     @ObservationIgnored private let defaults: UserDefaults
@@ -24,6 +25,11 @@ final class LocalStore {
     /// （Mac はクリックかスペースキーを 2 回。docs/SPEC.md「アクセシビリティ」）。ランキングは長押しと区別しない
     var tapToDonate: Bool {
         didSet { defaults.set(tapToDonate, forKey: Key.tapToDonate) }
+    }
+
+    /// 設定「回収演出を控えめにする」。オンなら、OS の「視差効果を減らす」と同じく、グリッチと揺れを止めて、飛行船の影と判子だけにする
+    var reducesCollectEffect: Bool {
+        didSet { defaults.set(reducesCollectEffect, forKey: Key.reducesCollectEffect) }
     }
 
     /// 最初の 1 回（練習ラウンド）を終えたか。終えるまでは練習ラウンドにする（無効になったラウンドは数えない）
@@ -40,6 +46,7 @@ final class LocalStore {
         self.defaults = defaults
         hasAcknowledgedSafetyNotice = defaults.bool(forKey: Key.hasAcknowledgedSafetyNotice)
         tapToDonate = defaults.bool(forKey: Key.tapToDonate)
+        reducesCollectEffect = defaults.bool(forKey: Key.reducesCollectEffect)
         hasCompletedFirstRound = defaults.bool(forKey: Key.hasCompletedFirstRound)
         seenTutorialBubbles = Set(defaults.stringArray(forKey: Key.seenTutorialBubbles) ?? [])
     }
@@ -53,6 +60,7 @@ final class LocalStore {
         }
         hasAcknowledgedSafetyNotice = false
         tapToDonate = false
+        reducesCollectEffect = false
         hasCompletedFirstRound = false
         seenTutorialBubbles = []
     }
