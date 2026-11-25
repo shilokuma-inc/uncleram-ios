@@ -163,7 +163,7 @@
 
 - **商標の確認:** J-PlatPat と USPTO で、区分 9・28・41 を確認する。
 - **App Store Connect:** アプリを登録して「Uncle RAM」の名前を押さえる。Bundle ID は利用者に見えないので、名前が変わってもそのまま使える。
-- **App Store Connect の設定:** Game Center のランキング 14 本と実績、App 内課金の 5 商品、iCloud。ランキングは、リポジトリの `UncleRAM/GameCenterResources.gamekit` を Xcode の「Push to App Store Connect」で送る。実績は、段取り 4 で称号と一緒に作る（[SPEC.md](SPEC.md)「Game Center と名前の扱い」）。
+- **App Store Connect の設定:** Game Center のランキング 14 本と実績、App 内課金の 5 商品、iCloud。ランキングは、リポジトリの `UncleRAM/GameCenterResources.gamekit` を Xcode の「Push to App Store Connect」で送る（2026-11-26 に 14 本を送った。`.gamekit` を直したら、もう一度 Push する）。実績は、段取り 4 で称号と一緒に作る（[SPEC.md](SPEC.md)「Game Center と名前の扱い」）。
 - **紹介ページ:** prices.json、プライバシーポリシー、サポートページ、apple-app-site-association を置く。
 - **EU:** 取引業者の申告。
 

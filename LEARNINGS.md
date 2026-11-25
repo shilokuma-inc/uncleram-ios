@@ -10,12 +10,14 @@
 
 - `INFOPLIST_KEY_UIApplicationSupportsMultipleScenes` は Info.plist の生成に使われない。`INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES` のままだと、Info.plist のファイルに `UIApplicationSupportsMultipleScenes = false` を書いても `true` で上書きされる。生成を止めて、`UIApplicationSceneManifest` をファイルに書く（2026-11-12）
 - 引き継ぎ資料の `tools/` は、macOS のファイルシステムが大文字と小文字を区別しないため、テンプレートの `Tools/` と同じ場所になる。`Tools/sim.py` と `Tools/artwork/` に置いた（2026-11-12）
+- プロジェクトは Xcode 26.6 に合わせている。Xcode 27.1 で開いて GameKit バンドルの Push を試したあと、`project.pbxproj` と `Info.plist` が書き換わっていた。並び順が変わり、`UncleRAM.entitlements` が同期フォルダの除外から外れ、`ITSAppUsesNonExemptEncryption` が Info.plist から `INFOPLIST_KEY_` の設定に移り、`Configs/Project.xcconfig` にある `DEVELOPMENT_TEAM` が重ねて書かれる。これはコミットしない（2026-11-26）
 
 ## Game Center
 
 - Xcode 26 の GameKit バンドル（`.gamekit`）は、中の `gameCenterResources.json`（`meta.version` は `2024-11-15`）だけで読める。書き方は Apple の公式サンプル（apple/unityplugins の `Apple.GameKit.Sample/GameCenterResources.gamekit`）が参考になる。繰り返し型は `recurrenceStartDate`（UTC の ISO 8601）・`recurrenceDuration`（例 `P1D`）・`recurrenceRule`（例 `FREQ=DAILY;INTERVAL=1`）、スコアの範囲は文字列（`"0"`・`"300"`）（2026-11-24）
 - 同期フォルダ（`PBXFileSystemSynchronizedRootGroup`）に置いた `.gamekit` は、xcodebuild ではフォルダとして扱われ、中の JSON がアプリの直下にコピーされる。動きには影響しない。Xcode で作られたほかのプロジェクトでも、同期フォルダの中に置いてターゲットに入れている（2026-11-24）
 - Mac でアドホック署名（`CODE_SIGN_IDENTITY=-`・`CODE_SIGN_STYLE=Manual`・プロファイルなし）すると、`com.apple.developer.game-center` の権限があるだけで「requires a provisioning profile」でビルドが止まる。CI の Mac のテストとアーカイブはアドホック署名なので、権限は今は iOS だけ（`CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]`・`[sdk=iphonesimulator*]`）に付けている（2026-11-24）
+- 「Push to App Store Connect」をすると、Xcode が `gameCenterResources.json` を自分の書き方（キーの並び・`/` を `\/` にする）で書き直す。中身は変わらない。差分が出ないよう、リポジトリの JSON は Xcode の書き方にそろえてある。手で直したあとに Push すると、また書き直されるので、Push のあとの差分もコミットする（2026-11-26）
 
 ## 仕様と試算
 
