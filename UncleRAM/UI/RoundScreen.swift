@@ -85,6 +85,20 @@ struct RoundScreen: View {
                 coach.reveal(.bluff)
             }
         }
+        // デイリーを開いたまま世界標準時の 0 時を越えたら、押し始める前ならタイトルに戻す（前の日の条件で始めないように）
+        .task(id: mode.daily?.day) {
+            guard let challenge = mode.daily else {
+                return
+            }
+            let remaining = challenge.day.start.addingTimeInterval(86_400).timeIntervalSinceNow
+            if remaining > 0 {
+                try? await Task.sleep(for: .seconds(remaining))
+            }
+            guard !Task.isCancelled else {
+                return
+            }
+            leaveIfDailyIsOver()
+        }
         .onChange(of: engine.phase) { _, phase in
             recordDaily(phase)
             guard case let .result(outcome) = phase else {
@@ -108,10 +122,19 @@ struct RoundScreen: View {
                 bench.appDidEnterBackground()
             case .active:
                 engine.sceneBecameActive()
+                leaveIfDailyIsOver()
             @unknown default:
                 break
             }
         }
+    }
+
+    /// 開いているデイリーの日が終わっていて、まだ押し始めていなければ、タイトルに戻す
+    private func leaveIfDailyIsOver() {
+        guard let challenge = mode.daily, challenge.status() != .today, engine.phase == .ready else {
+            return
+        }
+        onExit?()
     }
 
     /// デイリーの 1 日 1 回を記録する。押し始めた時点でその日の 1 回を使い、結果が出たら書き足す（無効も 1 回に数える）
@@ -121,6 +144,10 @@ struct RoundScreen: View {
         }
         switch phase {
         case .donating:
+            // 0 時を越えたところで押し始めた（タイトルに戻すのが間に合わなかった）ときは、前の日の記録にしない
+            guard challenge.status() == .today else {
+                return
+            }
             store.dailyRecord = .started(on: challenge.day)
         case let .result(outcome):
             if let record = store.dailyRecord, record.isPlayed(on: challenge.day) {
