@@ -188,6 +188,8 @@ struct DonationStatement: View {
                 HStack(alignment: .firstTextBaseline) {
                     Text("Mac で増設すると")
                         .scaledFont(.mincho(14))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                     Spacer()
                     Text(verbatim: price.formatted(price.amount(for: engine.donatedBytes)))
                         .font(Theme.display(22))
@@ -197,17 +199,24 @@ struct DonationStatement: View {
                 HStack(alignment: .firstTextBaseline) {
                     Text("\(engine.client.name)の買取額")
                         .scaledFont(.mincho(14))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                     Spacer()
                     Text(verbatim: price.formatted(0))
                         .font(Theme.display(22))
                         .foregroundStyle(Theme.red)
                 }
+                // 換算額の根拠（単価・時点・税の扱い）は、文字を大きくしても切らずに出す（docs/SPEC.md「金額の表示」の 1.1.6）
                 VStack(alignment: .leading, spacing: 2) {
                     Text("公式ストアの増設価格 1GB \(price.formattedPricePerGigabyte)")
-                    HStack(spacing: 6) {
-                        Text(verbatim: price.note)
-                        Text(verbatim: price.changeNote)
-                            .foregroundStyle(Theme.red)
+                        .fixedSize(horizontal: false, vertical: true)
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 6) {
+                            priceNote
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            priceNote
+                        }
                     }
                 }
                 .scaledFont(.mincho(11, .medium))
@@ -217,6 +226,12 @@ struct DonationStatement: View {
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
         .doubleFrame()
+    }
+
+    @ViewBuilder private var priceNote: some View {
+        Text(verbatim: price.note)
+        Text(verbatim: price.changeNote)
+            .foregroundStyle(Theme.red)
     }
 
     private func row(_ title: LocalizedStringKey, _ value: String, typewriter: Bool = false) -> some View {

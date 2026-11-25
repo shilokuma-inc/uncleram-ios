@@ -258,8 +258,10 @@ struct HoldButtonFace: View {
 
 /// 回収飛行船。段階が上がるほど大きく、近くに寄ってくる
 struct Airship: View {
+    static let defaultSize = CGSize(width: 104, height: 72)
+
     let stage: RoundPlan.HintStage
-    var baseSize = CGSize(width: 104, height: 72)
+    var baseSize = Airship.defaultSize
     var showsLabel = true
 
     private var scale: CGFloat {

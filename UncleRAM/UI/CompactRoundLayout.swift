@@ -21,17 +21,20 @@ struct CompactRoundLayout: View {
                 leaning: ChairmanLines.isLeaning(engine)
             )
             DonationReadout(engine: engine, numberSize: isShort ? 46 : 58, unitSize: isShort ? 16 : 20)
-            ZStack(alignment: .topTrailing) {
-                Group {
-                    if case let .unavailable(reason) = engine.phase {
-                        UnavailableNotice(reason: reason)
-                    } else {
-                        HoldButton(engine: engine, diameter: isShort ? 150 : 200)
+            // ボタンは残りの高さに収める。文字を大きくすると（Dynamic Type）上の欄が伸びるので、その分ボタンが縮む
+            GeometryReader { proxy in
+                ZStack(alignment: .topTrailing) {
+                    Group {
+                        if case let .unavailable(reason) = engine.phase {
+                            UnavailableNotice(reason: reason)
+                        } else {
+                            HoldButton(engine: engine, diameter: buttonDiameter(fitting: proxy.size.height))
+                        }
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    Airship(stage: engine.hintStage, baseSize: isShort ? Self.shortAirshipSize : Airship.defaultSize)
+                        .padding(.top, 2)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                Airship(stage: engine.hintStage)
-                    .padding(.top, 2)
             }
             PriceFooter(engine: engine, compact: isShort)
         }
@@ -39,6 +42,14 @@ struct CompactRoundLayout: View {
         .padding(.top, isShort ? 8 : 16)
         .padding(.bottom, isShort ? 8 : 24)
         .foregroundStyle(Theme.navy)
+    }
+
+    /// 低い画面の飛行船。警告（3 段階目）で大きくなっても、尾がボタンにかからない大きさ
+    private static let shortAirshipSize = CGSize(width: 80, height: 55)
+
+    /// ボタンの直径。画面の高さで決めた大きさを上限に、ボタンの欄の高さ（外の輪と余白を含めて直径の約 1.12 倍）に収める
+    private func buttonDiameter(fitting height: CGFloat) -> CGFloat {
+        min(isShort ? 150 : 200, max(110, height / 1.12))
     }
 
     private var header: some View {
@@ -130,6 +141,9 @@ struct PriceFooter: View {
                     .foregroundStyle(Theme.red)
             }
             .scaledFont(.mincho(compact ? 10 : 11, .medium))
+            // 文字を大きくしても 1 行ずつに収め、ボタンの欄より先に場所を取る（根拠が画面の外に押し出されないように）
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
         }
     }
 }
