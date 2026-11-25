@@ -20,6 +20,8 @@ final class RoundEventMonitor {
     private let engine: RoundEngine
     private var observers: [NSObjectProtocol] = []
     private var pressureSource: (any DispatchSourceMemoryPressure)?
+    /// 設定「タップで献上」。RoundScreen が設定から写す（Mac のスペースキーの扱いを変える）
+    var tapToDonate = false
     #if os(macOS)
     private var keyMonitor: Any?
     private var compressionTask: Task<Void, Never>?
@@ -107,7 +109,8 @@ final class RoundEventMonitor {
     }
 
     #if os(macOS)
-    /// スペースキーの長押しで献上する（キーの繰り返しは無視する）
+    /// スペースキーの長押しで献上する（キーの繰り返しは無視する）。
+    /// 設定「タップで献上」のときは、1 回押すと始め、もう一度押すと納品する（離したときは何もしない）
     private func startKeyMonitor() {
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .keyUp]) { [weak self] event in
             // 修飾キーつきのスペースでは始めない。離すほうは、途中で修飾キーを押していても必ず止める
@@ -120,7 +123,11 @@ final class RoundEventMonitor {
                 guard let self, !self.engine.isAutomated else {
                     return
                 }
-                if event.type == .keyDown {
+                if self.tapToDonate {
+                    if event.type == .keyDown, !event.isARepeat {
+                        self.engine.toggleDonation()
+                    }
+                } else if event.type == .keyDown {
                     if !event.isARepeat {
                         self.engine.beginHold()
                     }

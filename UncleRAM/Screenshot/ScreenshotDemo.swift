@@ -19,6 +19,8 @@ enum ScreenshotDemo {
     enum Scene: String {
         /// タイトル画面
         case title
+        /// 設定の画面
+        case settings
         /// 待機中のラウンド画面
         case home
         /// 献上中・ヒントの 1 段階目（気配）

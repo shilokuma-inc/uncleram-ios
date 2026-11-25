@@ -5,6 +5,7 @@ import SwiftUI
 /// 画面ができたときに足す（2026-11-26 にユーザーが決定）
 struct TitleScreen: View {
     let onStartExpress: () -> Void
+    let onOpenSettings: () -> Void
 
     var body: some View {
         GeometryReader { proxy in
@@ -12,11 +13,11 @@ struct TitleScreen: View {
             ZStack {
                 PaperBackground(wide: wide)
                 if wide {
-                    WideTitleLayout(onStartExpress: onStartExpress)
+                    WideTitleLayout(onStartExpress: onStartExpress, onOpenSettings: onOpenSettings)
                 } else {
                     // 低い画面や、文字を大きくしたとき（Dynamic Type）は縦に送れるようにする。収まるときは下の注記を画面の下に寄せる
                     ScrollView {
-                        CompactTitleLayout(height: proxy.size.height, onStartExpress: onStartExpress)
+                        CompactTitleLayout(height: proxy.size.height, onStartExpress: onStartExpress, onOpenSettings: onOpenSettings)
                             .frame(maxWidth: 480)
                             .frame(maxWidth: .infinity, minHeight: proxy.size.height)
                     }
@@ -127,6 +128,7 @@ struct FictionDisclaimer: View {
 private struct CompactTitleLayout: View {
     let height: CGFloat
     let onStartExpress: () -> Void
+    let onOpenSettings: () -> Void
 
     /// iPhone SE のように低い画面では、指差す手の絵を低くする
     private var isShort: Bool {
@@ -153,8 +155,9 @@ private struct CompactTitleLayout: View {
             Spacer(minLength: 8)
             PrimaryInkButton(title: "献上をはじめる", fontSize: 17, verticalPadding: 15, action: onStartExpress)
                 .keyboardShortcut(.defaultAction)
+            // デザインは「強化 ✦ ランキング ✦ 設定」。強化とランキングは、行き先の画面ができたら並べる
+            TextLink(title: "設定", action: onOpenSettings)
             FictionDisclaimer()
-                .padding(.top, 8)
         }
         .padding(.horizontal, 20)
         .padding(.top, isShort ? 8 : 16)
@@ -166,12 +169,16 @@ private struct CompactTitleLayout: View {
 /// Mac（と、広い iPad）のタイトル。右の列（本日のデイリー・前回のご提供）は、デイリーをつなぐときに足す
 private struct WideTitleLayout: View {
     let onStartExpress: () -> Void
+    let onOpenSettings: () -> Void
 
     var body: some View {
         VStack(spacing: 14) {
             HStack {
                 CorporateMasthead()
                 Spacer()
+                // デザインは「強化・ランキング・設定」。強化とランキングは、行き先の画面ができたら並べる
+                TextLink(title: "設定", action: onOpenSettings)
+                    .keyboardShortcut(",", modifiers: .command)
             }
             Ornament()
             HStack(alignment: .center, spacing: 36) {
@@ -199,7 +206,7 @@ private struct WideTitleLayout: View {
                 FictionDisclaimer(singleLine: true, fontSize: 12)
                 Spacer()
                 #if os(macOS)
-                Text("return: 献上をはじめる")
+                Text("return: 献上をはじめる · ⌘, : 設定")
                     .scaledFont(.typewriter(12))
                     .foregroundStyle(Theme.subText)
                 #endif
