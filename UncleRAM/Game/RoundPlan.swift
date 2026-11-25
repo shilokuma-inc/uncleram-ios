@@ -28,6 +28,11 @@ nonisolated struct RoundPlan: Sendable, Equatable {
     let hintThresholds: [Double]
     /// はったり（偽の気配）を出す位置。出さないラウンドは nil
     let bluffAt: Double?
+    /// 練習ラウンド（最初の 1 回）か。ランキングに送らない
+    var isPractice = false
+
+    /// 練習ラウンドの回収ライン（docs/SPEC.md「説明なしで分かる UI」）
+    static let practiceLine = 0.5
 
     /// ヒントの出る位置（回収ラインの手前）と揺らぎ
     static let hintOffsets: [(distance: Double, jitter: Double)] = [
@@ -66,6 +71,15 @@ nonisolated struct RoundPlan: Sendable, Equatable {
 
         let bluffAt: Double? = random.chance(bluffProbability) ? random.uniform(bluffRange) : nil
         return RoundPlan(isEarlyCollection: isEarly, collectionLine: line, hintThresholds: thresholds, bluffAt: bluffAt)
+    }
+
+    /// 練習ラウンド（最初の 1 回）の条件。回収ラインは枠の 50% に固定し、ヒントは揺らがせずに決まった位置に出す。
+    /// 早期回収とはったりは出さない。乱数を使わないので、そのあとのラウンド（デイリーを含む）の乱数の並びは変わらない
+    static func practice(safetyLine: Double) -> RoundPlan {
+        let line = min(practiceLine, max(0.05, safetyLine - marginBelowSafetyLine))
+        var thresholds = hintOffsets.map { max(0, line - $0.distance) }
+        thresholds[2] = min(thresholds[2], line - minimumHintGap / 2)
+        return RoundPlan(isEarlyCollection: false, collectionLine: line, hintThresholds: thresholds, bluffAt: nil, isPractice: true)
     }
 
     /// 献上量（割合）に対して、出ているヒントの段階

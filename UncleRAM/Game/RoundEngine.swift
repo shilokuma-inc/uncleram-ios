@@ -65,6 +65,8 @@ final class RoundEngine {
     @ObservationIgnored private(set) var lastUnmapDuration: TimeInterval?
     /// このラウンドの条件（献上中と結果のときだけ）
     private(set) var plan: RoundPlan?
+    /// 次のラウンドを練習ラウンド（最初の 1 回）にするか。RoundScreen が端末の記録から決める
+    var isPracticeRound = false
     /// 計測（BenchRunner）がラウンドを動かしているか。この間は人の長押し（指・クリック・スペースキー）を受け付けない。
     /// inactive・ウィンドウが前面でなくなった・メモリ警告・発熱・バックグラウンドは、計測中でもふだんどおり効く
     var isAutomated = false
@@ -141,7 +143,9 @@ final class RoundEngine {
             return
         }
         let safety = SafetyLine(budgetBytes: budgetBytes)
-        let plan = RoundPlan.make(client: client, safetyLine: safetyLineFill, random: &random)
+        let plan = isPracticeRound && !isAutomated
+            ? RoundPlan.practice(safetyLine: safetyLineFill)
+            : RoundPlan.make(client: client, safetyLine: safetyLineFill, random: &random)
         self.plan = plan
         hintStage = .none
         bluff = .none
