@@ -11,7 +11,10 @@ final class LocalStore {
         static let hasCompletedFirstRound = "hasCompletedFirstRound"
         static let seenTutorialBubbles = "seenTutorialBubbles"
         static let reducesCollectEffect = "reducesCollectEffect"
-        static let all = [hasAcknowledgedSafetyNotice, tapToDonate, hasCompletedFirstRound, seenTutorialBubbles, reducesCollectEffect]
+        static let dailyRecord = "dailyRecord.v1"
+        static let all = [
+            hasAcknowledgedSafetyNotice, tapToDonate, hasCompletedFirstRound, seenTutorialBubbles, reducesCollectEffect, dailyRecord
+        ]
     }
 
     @ObservationIgnored private let defaults: UserDefaults
@@ -32,6 +35,17 @@ final class LocalStore {
         didSet { defaults.set(reducesCollectEffect, forKey: Key.reducesCollectEffect) }
     }
 
+    /// 最後に挑戦したデイリーの記録（1 日 1 回）。新しい日に挑戦すると上書きする
+    var dailyRecord: DailyRecord? {
+        didSet {
+            if let dailyRecord, let data = try? JSONEncoder().encode(dailyRecord) {
+                defaults.set(data, forKey: Key.dailyRecord)
+            } else {
+                defaults.removeObject(forKey: Key.dailyRecord)
+            }
+        }
+    }
+
     /// 最初の 1 回（練習ラウンド）を終えたか。終えるまでは練習ラウンドにする（無効になったラウンドは数えない）
     var hasCompletedFirstRound: Bool {
         didSet { defaults.set(hasCompletedFirstRound, forKey: Key.hasCompletedFirstRound) }
@@ -47,6 +61,7 @@ final class LocalStore {
         hasAcknowledgedSafetyNotice = defaults.bool(forKey: Key.hasAcknowledgedSafetyNotice)
         tapToDonate = defaults.bool(forKey: Key.tapToDonate)
         reducesCollectEffect = defaults.bool(forKey: Key.reducesCollectEffect)
+        dailyRecord = defaults.data(forKey: Key.dailyRecord).flatMap { try? JSONDecoder().decode(DailyRecord.self, from: $0) }
         hasCompletedFirstRound = defaults.bool(forKey: Key.hasCompletedFirstRound)
         seenTutorialBubbles = Set(defaults.stringArray(forKey: Key.seenTutorialBubbles) ?? [])
     }
@@ -61,6 +76,7 @@ final class LocalStore {
         hasAcknowledgedSafetyNotice = false
         tapToDonate = false
         reducesCollectEffect = false
+        dailyRecord = nil
         hasCompletedFirstRound = false
         seenTutorialBubbles = []
     }
