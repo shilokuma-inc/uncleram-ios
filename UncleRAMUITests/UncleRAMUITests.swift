@@ -137,4 +137,29 @@ final class UncleRAMUITests: XCTestCase {
         XCTAssertTrue(app.buttons["もう一度献上する"].waitForExistence(timeout: 5))
         XCTAssertFalse(showResult.exists)
     }
+
+    /// 結果の「明細書をシェア」で共有のプレビューが開き、画像の大きさと、画像・文字を切り替えられる。「閉じる」で結果に戻る
+    @MainActor
+    func testShareStatementOpensPreview() throws {
+        let app = XCUIApplication()
+        app.launchArguments += ["-screenshot-demo", "-screenshot-scene", "delivered"]
+        app.launch()
+
+        let share = app.buttons["明細書をシェア"]
+        XCTAssertTrue(share.waitForExistence(timeout: 5))
+        share.tap()
+        let story = app.buttons["9:16 ストーリー用"]
+        XCTAssertTrue(story.waitForExistence(timeout: 5))
+        story.tap()
+        XCTAssertTrue(app.buttons["画像を保存"].exists)
+
+        app.buttons["文字"].tap()
+        XCTAssertTrue(app.buttons["文字をコピー"].waitForExistence(timeout: 5))
+
+        let close = app.buttons["閉じる"]
+        close.tap()
+        let dismissed = expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: close)
+        wait(for: [dismissed], timeout: 5)
+        XCTAssertTrue(app.buttons["もう一度献上する"].exists)
+    }
 }
