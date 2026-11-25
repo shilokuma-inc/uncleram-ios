@@ -16,6 +16,8 @@
 
 - リポジトリが `~/Desktop` の下にあると、Mac の Unit テストからソースのファイル（`#filePath` から辿ったもの）を読もうとしたところで、テストが止まって進まなくなる。テストを動かすアプリ（test host）が、デスクトップのファイルへのアクセスの許可を待つため（アドホック署名はビルドのたびに別のアプリとみなされる）。CI はデスクトップの外に checkout するので止まらない。ソースを読む確かめは、テストではなく CI のスクリプト（例: `Tools/fonts/subset.py --check`）で行う（2026-11-26）
 
+- シェア画像（献上明細書）を目で確かめるときは、`TEST_RUNNER_UNCLERAM_SHARE_IMAGE_DIR=<リポジトリの外のフォルダ>` を付けて `-only-testing:UncleRAMTests/ShareTests` を流す。xcodebuild は `TEST_RUNNER_` を外した名前でテストに環境変数を渡すので、4:5 と 9:16 の PNG（納品と回収）がそのフォルダに書き出される。Mac と iOS Simulator のどちらでも書き出せる（2026-11-26）
+
 - CI の Build は、作業ブランチへの push では Unit テストだけを流し、PR では iOS Simulator の UI テストまで流す。画面の流れを変えたら、手元で `-only-testing:UncleRAMUITests/UncleRAMUITests` を流しておく。UI テストは起動引数 `-hasAcknowledgedSafetyNotice YES`（UserDefaults の引数のドメイン）で、初回の案内を飛ばしている（2026-11-26）
 
 ## Game Center
