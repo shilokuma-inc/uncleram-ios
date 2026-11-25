@@ -75,9 +75,8 @@ struct RoundScreen: View {
             }
             coach.dismiss()
             // 練習ラウンドを終えたら、次から普段のラウンドにする（無効になったときは、もう一度練習にする）
-            let voided = if case .voided = outcome.kind { true } else { false }
-            if outcome.plan.isPractice, !voided {
-                store?.hasCompletedFirstRound = true
+            if let completed = Self.practiceCompletion(after: outcome) {
+                store?.hasCompletedFirstRound = completed
             }
             engine.isPracticeRound = !(store?.hasCompletedFirstRound ?? true)
             if outcome.kind == .collected, outcome.plan.isEarlyCollection, !engine.isAutomated {
@@ -97,6 +96,19 @@ struct RoundScreen: View {
                 break
             }
         }
+    }
+
+    /// 練習ラウンドの結果のあと、「練習を終えた」をどうするか。練習ラウンドでなければ nil（変えない）。
+    /// 納品のあとで同じ結果が無効に変わる（inactive で離したあと、そのまま裏に回った）ときも結果が届くので、
+    /// そのときは、いったん記録した「練習を終えた」を取り消す（次も練習にする）
+    static func practiceCompletion(after outcome: RoundOutcome) -> Bool? {
+        guard outcome.plan.isPractice else {
+            return nil
+        }
+        if case .voided = outcome.kind {
+            return false
+        }
+        return true
     }
 
     @ViewBuilder

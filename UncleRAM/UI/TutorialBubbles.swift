@@ -19,9 +19,10 @@ enum TutorialBubble: String, CaseIterable {
     /// 献上量がこれを越えたら「離せば納品だ」を出す（枠に対する割合）
     static let releaseHintFill = 0.2
 
-    var text: LocalizedStringKey {
+    /// 吹き出しの文言。設定「タップで献上」のときは、離しても納品しないので、もう一度押すことを伝える
+    func text(tapToDonate: Bool) -> LocalizedStringKey {
         switch self {
-        case .releaseToDeliver: "離せば納品だ"
+        case .releaseToDeliver: tapToDonate ? "もう一度押せば納品だ" : "離せば納品だ"
         case .sign: "会長の機嫌が変わった"
         case .approach: "飛行船が近い"
         case .warning: "もう危ない"
@@ -38,10 +39,10 @@ enum TutorialBubble: String, CaseIterable {
         }
     }
 
-    /// VoiceOver で読み上げる文（`text` と同じ文言）
-    var announcement: String {
+    /// VoiceOver で読み上げる文（`text(tapToDonate:)` と同じ文言）
+    func announcement(tapToDonate: Bool) -> String {
         switch self {
-        case .releaseToDeliver: String(localized: "離せば納品だ")
+        case .releaseToDeliver: String(localized: tapToDonate ? "もう一度押せば納品だ" : "離せば納品だ")
         case .sign: String(localized: "会長の機嫌が変わった")
         case .approach: String(localized: "飛行船が近い")
         case .warning: String(localized: "もう危ない")
@@ -84,7 +85,7 @@ final class TutorialCoach {
         }
         store.seenTutorialBubbles.insert(bubble.rawValue)
         current = bubble
-        AccessibilityNotification.Announcement(bubble.announcement).post()
+        AccessibilityNotification.Announcement(bubble.announcement(tapToDonate: store.tapToDonate)).post()
         hideTask?.cancel()
         hideTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(Self.displayDuration))
@@ -106,13 +107,14 @@ final class TutorialCoach {
 /// 会長の吹き出し（docs/design/Tutorial.png）。紙の札に紺の影を付け、指し示す側に三角のしっぽを出す
 struct TutorialBubbleView: View {
     let bubble: TutorialBubble
+    @Environment(LocalStore.self) private var store: LocalStore?
     /// しっぽを出す辺（吹き出しが部品の下にあるときは上、上にあるときは下）
     var tailEdge: VerticalEdge = .top
     var tailAlignment: HorizontalAlignment = .leading
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(bubble.text)
+            Text(bubble.text(tapToDonate: store?.tapToDonate ?? false))
                 .scaledFont(.mincho(15, .extraBold))
             if let caption = bubble.caption {
                 Text(caption)
