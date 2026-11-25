@@ -13,7 +13,7 @@ struct RankingSubmitterTests {
         let store = InMemoryRankingStore()
         let submitter = RankingSubmitter(service: service, store: store)
 
-        await submitter.submit(try Self.record(.express))
+        await submitter.submit(Self.record(.express))
         #expect(service.submitted.isEmpty)
         #expect(store.pendingScores.isEmpty)
         // 自分の最高記録は残す
@@ -30,7 +30,7 @@ struct RankingSubmitterTests {
         let store = InMemoryRankingStore()
         let submitter = RankingSubmitter(service: service, store: store)
 
-        let record = try Self.record(.express)
+        let record = Self.record(.express)
         await submitter.submit(record)
         #expect(service.submitted == record.leaderboardScores)
         #expect(store.pendingScores.isEmpty)
@@ -43,7 +43,7 @@ struct RankingSubmitterTests {
         let store = InMemoryRankingStore()
         let submitter = RankingSubmitter(service: service, store: store)
 
-        let record = try Self.record(.express)
+        let record = Self.record(.express)
         await submitter.submit(record)
         #expect(store.pendingScores.scores == record.leaderboardScores)
 
@@ -66,7 +66,7 @@ struct RankingSubmitterTests {
         let store = InMemoryRankingStore()
         let submitter = RankingSubmitter(service: service, store: store) { clock.now }
 
-        let record = try Self.record(.daily, recordedAt: clock.now)
+        let record = Self.record(.daily(LeaderboardRulesTests.firstDay))
         await submitter.submit(record)
         #expect(store.pendingScores.scores.count == 2)
 
@@ -95,7 +95,7 @@ struct RankingSubmitterTests {
         let store = InMemoryRankingStore()
         let submitter = RankingSubmitter(service: service, store: store) { clock.now }
 
-        await submitter.submit(try Self.record(.express, recordedAt: clock.now))
+        await submitter.submit(Self.record(.express))
         service.failure = nil
         clock.now = try Self.date("2026-12-09T10:00:00Z")
         await submitter.resendPending()
@@ -147,8 +147,8 @@ struct RankingSubmitterTests {
     @Test
     func expressBestKeepsEachMaximum() throws {
         var bests = PersonalBests()
-        bests.record(try Self.record(.express, skill: 250, donated: 1_000))
-        bests.record(try Self.record(.express, skill: 120, donated: 3_000))
+        bests.record(Self.record(.express, skill: 250, donated: 1_000))
+        bests.record(Self.record(.express, skill: 120, donated: 3_000))
         #expect(bests.express == PersonalBests.Best(skillScore: 250, donatedScore: 3_000, memoryClass: .iosSmall, expiresAt: nil))
     }
 
@@ -158,11 +158,11 @@ struct RankingSubmitterTests {
         let firstDay = try Self.date("2026-12-01T10:00:00Z")
         let secondDay = try Self.date("2026-12-02T10:00:00Z")
         var bests = PersonalBests()
-        bests.record(try Self.record(.daily, recordedAt: firstDay, skill: 250, donated: 3_000))
+        bests.record(Self.record(.daily(DailyDay(containing: firstDay)), skill: 250, donated: 3_000))
         #expect(bests.daily(at: firstDay)?.skillScore == 250)
         #expect(bests.daily(at: secondDay) == nil)
 
-        bests.record(try Self.record(.daily, recordedAt: secondDay, skill: 90, donated: 500))
+        bests.record(Self.record(.daily(DailyDay(containing: secondDay)), skill: 90, donated: 500))
         #expect(bests.daily(at: secondDay)?.skillScore == 90)
         #expect(bests.daily(at: secondDay)?.donatedScore == 500)
         #expect(bests.express == nil)
@@ -172,8 +172,8 @@ struct RankingSubmitterTests {
     @Test
     func donatedBestRestartsWhenClassChanges() throws {
         var bests = PersonalBests()
-        bests.record(try Self.record(.express, skill: 250, donated: 3_000))
-        bests.record(try Self.record(.express, device: DeviceMemoryProfile(kind: .mac, nominalGigabytes: 16), skill: 100, donated: 800))
+        bests.record(Self.record(.express, skill: 250, donated: 3_000))
+        bests.record(Self.record(.express, device: DeviceMemoryProfile(kind: .mac, nominalGigabytes: 16), skill: 100, donated: 800))
         #expect(bests.express == PersonalBests.Best(skillScore: 250, donatedScore: 800, memoryClass: .macSmall, expiresAt: nil))
     }
 
@@ -191,7 +191,7 @@ struct RankingSubmitterTests {
         #expect(store.pendingScores.isEmpty)
         #expect(store.personalBests == PersonalBests())
 
-        let record = try Self.record(.daily)
+        let record = Self.record(.daily(LeaderboardRulesTests.firstDay))
         store.pendingScores.enqueue(record.leaderboardScores[0])
         store.personalBests.record(record)
 
@@ -219,19 +219,12 @@ struct RankingSubmitterTests {
     // MARK: - 補助
 
     static func record(
-        _ mode: RankingMode,
-        recordedAt: Date? = nil,
+        _ round: RankedRound,
         device: DeviceMemoryProfile = LeaderboardRulesTests.iPhone8GB,
         skill: Int = 291,
         donated: Int = 5_712
-    ) throws -> RankingRecord {
-        RankingRecord(
-            mode: mode,
-            skillScore: skill,
-            donatedScore: donated,
-            device: device,
-            recordedAt: try recordedAt ?? date("2026-12-01T10:00:00Z")
-        )
+    ) -> RankingRecord {
+        RankingRecord(round: round, skillScore: skill, donatedScore: donated, device: device)
     }
 
     static func score(_ name: String, _ value: Int, expiresAt: Date? = nil) -> LeaderboardScore {

@@ -6,7 +6,7 @@ nonisolated struct LeaderboardScore: Sendable, Equatable, Codable {
     let value: Int
     /// `LeaderboardContext` で符号化した、端末の種類とメモリのクラス
     let context: Int
-    /// これを過ぎたら送らない。デイリーは遊んだ日の世界標準時 24 時（過ぎてから送ると、次の日の回に入ってしまう）。速達便は nil
+    /// これを過ぎたら送らない。デイリーは挑戦した日の世界標準時 24 時（その日の回の終わり）。速達便は nil
     let expiresAt: Date?
 
     func isExpired(at now: Date) -> Bool {
@@ -17,28 +17,50 @@ nonisolated struct LeaderboardScore: Sendable, Equatable, Codable {
     }
 }
 
+/// ランキングに入るラウンド。デイリーは、挑戦した日（ラウンドの条件を作った日）を持つ
+nonisolated enum RankedRound: Sendable, Equatable {
+    case express
+    case daily(DailyDay)
+
+    var mode: RankingMode {
+        switch self {
+        case .express:
+            .express
+        case .daily:
+            .daily
+        }
+    }
+
+    /// 送る期限。デイリーは挑戦した日の世界標準時 24 時（繰り返し型ランキングの、その日の回の終わり）。速達便は無し
+    var expiresAt: Date? {
+        switch self {
+        case .express:
+            nil
+        case .daily(let day):
+            DailyDay(daysSince1970: day.daysSince1970 + 1).start
+        }
+    }
+}
+
 /// ランキングに送る 1 ラウンドの記録。`RankingRecord.decide` で、送るものだけを作る
 nonisolated struct RankingRecord: Sendable, Equatable {
     /// 腕前スコアの上限（gameCenterResources.json の腕前のランキングの scoreRangeEnd と同じ）
     static let maximumSkillScore = 300
 
-    let mode: RankingMode
+    let round: RankedRound
     /// 腕前スコア（pt）
     let skillScore: Int
     /// 献上量のスコア（献上量 MB × ニアミス倍率）
     let donatedScore: Int
     let device: DeviceMemoryProfile
-    /// 記録した時刻（ラウンドが終わった時刻）
-    let recordedAt: Date
 
-    /// 送る期限。デイリーは遊んだ日の世界標準時 24 時、速達便は無し
+    var mode: RankingMode {
+        round.mode
+    }
+
+    /// 送る期限。デイリーは挑戦した日の世界標準時 24 時、速達便は無し
     var expiresAt: Date? {
-        switch mode {
-        case .express:
-            nil
-        case .daily:
-            Self.endOfUTCDay(containing: recordedAt)
-        }
+        round.expiresAt
     }
 
     /// 送る 2 本（腕前と、自分のクラスの献上量）
@@ -50,14 +72,6 @@ nonisolated struct RankingRecord: Sendable, Equatable {
             LeaderboardScore(leaderboardID: skill.identifier, value: skillScore, context: context, expiresAt: expiresAt),
             LeaderboardScore(leaderboardID: donated.identifier, value: donatedScore, context: context, expiresAt: expiresAt)
         ]
-    }
-
-    /// その日（世界標準時）の 24 時。デイリーの繰り返し型ランキングは、世界標準時 0 時に次の回へ切り替わる
-    static func endOfUTCDay(containing date: Date) -> Date {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = .gmt
-        // 世界標準時には夏時間が無いので、1 日はいつも 86,400 秒
-        return calendar.startOfDay(for: date).addingTimeInterval(86_400)
     }
 }
 
@@ -81,6 +95,8 @@ nonisolated enum RankingSkipReason: Sendable, Equatable {
     case practice(RankingPractice)
     /// 無効になったラウンド（バックグラウンドへの移行・発熱）。スコアが無いので送らない
     case voided
+    /// 世界標準時 0 時をまたいで終わったデイリー。挑戦した日の回は閉じているので送らない
+    case dailyClosed
     /// 腕前スコアが 0〜300 pt の外
     case skillScoreOutOfRange
     /// 献上量（倍率をかける前）が、端末の搭載メモリ（正式な容量に丸めた値）を超えている
@@ -90,24 +106,27 @@ nonisolated enum RankingSkipReason: Sendable, Equatable {
 extension RankingRecord {
     /// ラウンドの結果から、ランキングに送るかを決める（docs/SPEC.md「ランキング」の「不正なスコア」、「初回起動と設定」）。
     ///
-    /// 定期便は `RankingMode` に無いので、渡すことができない。回収されたラウンドは 0 を送る（ランキングに参加した記録になる）。
+    /// 定期便は `RankedRound` に無いので、渡すことができない。回収されたラウンドは 0 を送る（ランキングに参加した記録になる）。
     /// - Parameters:
-    ///   - mode: 速達便かデイリーか
+    ///   - round: 速達便か、デイリー（挑戦した日つき）か
     ///   - practice: 練習なら、その種類。今日（世界標準時）のデイリーかどうかは、デイリーの日付を決める側で判定して渡す
     ///   - device: 端末の種類と搭載メモリ。ふつうは `DeviceMemoryProfile.current`
-    ///   - recordedAt: ラウンドが終わった時刻
+    ///   - endedAt: ラウンドが終わった時刻。デイリーで、挑戦した日の世界標準時 24 時を過ぎていたら送らない
     static func decide(
         outcome: RoundOutcome,
-        mode: RankingMode,
+        round: RankedRound,
         practice: RankingPractice?,
         device: DeviceMemoryProfile,
-        recordedAt: Date
+        endedAt: Date
     ) -> RankingDecision {
         if let practice {
             return .skip(.practice(practice))
         }
         if case .voided = outcome.kind {
             return .skip(.voided)
+        }
+        if let expiresAt = round.expiresAt, endedAt >= expiresAt {
+            return .skip(.dailyClosed)
         }
         // 腕前スコアの丸め方は RoundOutcome.skillScore（到達率 × 倍率を最後に 1 回だけ四捨五入する）
         let skillScore = outcome.skillScore
@@ -116,11 +135,10 @@ extension RankingRecord {
         }
         return .submit(
             RankingRecord(
-                mode: mode,
+                round: round,
                 skillScore: skillScore,
                 donatedScore: outcome.score,
-                device: device,
-                recordedAt: recordedAt
+                device: device
             )
         )
     }

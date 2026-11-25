@@ -117,13 +117,12 @@ struct LeaderboardRulesTests {
 
     @Test
     func deliveredExpressRoundIsSubmitted() throws {
-        let recordedAt = try Self.date("2026-12-01T10:00:00Z")
         let decision = RankingRecord.decide(
             outcome: Self.outcome(.delivered),
-            mode: .express,
+            round: .express,
             practice: nil,
             device: Self.iPhone8GB,
-            recordedAt: recordedAt
+            endedAt: try Self.date("2026-12-01T10:00:00Z")
         )
         let record = try #require(Self.record(of: decision))
         #expect(record.skillScore == 291)
@@ -137,15 +136,15 @@ struct LeaderboardRulesTests {
         )
     }
 
-    /// デイリーは遊んだ日の世界標準時 24 時までに送る
+    /// デイリーは挑戦した日の世界標準時 24 時までに送る
     @Test
     func dailyRoundExpiresAtUTCMidnight() throws {
         let decision = RankingRecord.decide(
             outcome: Self.outcome(.audited),
-            mode: .daily,
+            round: .daily(Self.firstDay),
             practice: nil,
             device: DeviceMemoryProfile(kind: .mac, nominalGigabytes: 24),
-            recordedAt: try Self.date("2026-12-01T23:59:59Z")
+            endedAt: try Self.date("2026-12-01T23:59:59Z")
         )
         let record = try #require(Self.record(of: decision))
         let midnight = try Self.date("2026-12-02T00:00:00Z")
@@ -157,7 +156,6 @@ struct LeaderboardRulesTests {
             ]
         )
         #expect(record.leaderboardScores.allSatisfy { $0.expiresAt == midnight && $0.context == 132 })
-        #expect(RankingRecord.endOfUTCDay(containing: midnight) == (try Self.date("2026-12-03T00:00:00Z")))
     }
 
     /// 回収されたラウンドは 0 を送る
@@ -165,10 +163,10 @@ struct LeaderboardRulesTests {
     func collectedRoundSubmitsZero() throws {
         let decision = RankingRecord.decide(
             outcome: Self.outcome(.collected, donatedMegabytes: 2_000),
-            mode: .express,
+            round: .express,
             practice: nil,
             device: Self.iPhone8GB,
-            recordedAt: try Self.date("2026-12-01T10:00:00Z")
+            endedAt: try Self.date("2026-12-01T10:00:00Z")
         )
         let record = try #require(Self.record(of: decision))
         #expect(record.skillScore == 0)
@@ -184,10 +182,10 @@ struct LeaderboardRulesTests {
     func practiceAndVoidedRoundsAreSkipped(practice: RankingPractice?, kind: RoundOutcome.Kind, reason: RankingSkipReason) throws {
         let decision = RankingRecord.decide(
             outcome: Self.outcome(kind),
-            mode: .daily,
+            round: .daily(Self.firstDay),
             practice: practice,
             device: Self.iPhone8GB,
-            recordedAt: try Self.date("2026-12-01T10:00:00Z")
+            endedAt: try Self.date("2026-12-01T10:00:00Z")
         )
         #expect(decision == .skip(reason))
     }
@@ -197,10 +195,10 @@ struct LeaderboardRulesTests {
     func donationOverDeviceMemoryIsSkipped() throws {
         let decision = RankingRecord.decide(
             outcome: Self.outcome(.delivered),
-            mode: .express,
+            round: .express,
             practice: nil,
             device: DeviceMemoryProfile(kind: .iPhone, nominalGigabytes: 1),
-            recordedAt: try Self.date("2026-12-01T10:00:00Z")
+            endedAt: try Self.date("2026-12-01T10:00:00Z")
         )
         #expect(decision == .skip(.donatedOverMemory))
     }
@@ -219,6 +217,8 @@ struct LeaderboardRulesTests {
     // MARK: - 補助
 
     static let iPhone8GB = DeviceMemoryProfile(kind: .iPhone, nominalGigabytes: 8)
+    /// 2026-12-01（世界標準時）のデイリー
+    static let firstDay = DailyDay(year: 2026, month: 12, day: 1)
 
     /// 枠 3,072MB・回収ライン 64% で 1,904MB を納品すると、ニアミス ×3 で腕前 291 pt・献上量 5,712（GameRulesTests と同じ）
     static func outcome(_ kind: RoundOutcome.Kind, donatedMegabytes: UInt64 = 1_904) -> RoundOutcome {

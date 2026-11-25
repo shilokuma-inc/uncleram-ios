@@ -11,7 +11,7 @@ nonisolated struct PersonalBests: Sendable, Equatable, Codable {
         var donatedScore: Int
         /// 献上量の最高を出したクラス。献上量はクラスの中でだけ比べる
         var memoryClass: MemoryClass
-        /// デイリーの記録の期限（遊んだ日の世界標準時 24 時）。速達便は nil
+        /// デイリーの記録の期限（挑戦した日の世界標準時 24 時）。速達便は nil
         var expiresAt: Date?
     }
 
