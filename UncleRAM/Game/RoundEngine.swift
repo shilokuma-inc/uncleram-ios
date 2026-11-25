@@ -380,7 +380,8 @@ extension RoundEngine {
             hintStage = stage.0
             demoDonatedBytes = bytes(stage.1)
             phase = .donating
-        case .delivered, .collected:
+        case .delivered, .collect, .collected:
+            // 回収演出（collect）と回収の結果（collected）は、同じ回収のラウンドを出す。どちらを見せるかは RoundScreen が決める
             let delivered = scene == .delivered
             let collectedPlan = RoundPlan(isEarlyCollection: false, collectionLine: 0.58, hintThresholds: [0.43, 0.50, 0.56], bluffAt: nil)
             self.plan = delivered ? plan : collectedPlan

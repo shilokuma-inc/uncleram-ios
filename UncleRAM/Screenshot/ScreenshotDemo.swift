@@ -31,7 +31,9 @@ enum ScreenshotDemo {
         case warning
         /// 結果: ニアミスで納品
         case delivered
-        /// 結果: 回収
+        /// 回収演出（全メモリ 回収完了）。演出を流してから止まる
+        case collect
+        /// 結果: 回収（回収演出の「結果を見る」の先）
         case collected
     }
 
