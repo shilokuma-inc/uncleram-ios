@@ -6,6 +6,8 @@ import SwiftUI
 struct TitleScreen: View {
     let onStartExpress: () -> Void
     let onOpenSettings: () -> Void
+    /// 「?」から開く遊び方の 3 コマ。撮影モードの howToPlay では開いた状態で始める
+    @State private var showsHowToPlay = ScreenshotDemo.scene == .howToPlay
 
     var body: some View {
         GeometryReader { proxy in
@@ -13,18 +15,27 @@ struct TitleScreen: View {
             ZStack {
                 PaperBackground(wide: wide)
                 if wide {
-                    WideTitleLayout(onStartExpress: onStartExpress, onOpenSettings: onOpenSettings)
+                    WideTitleLayout(onStartExpress: onStartExpress, onOpenSettings: onOpenSettings) { showsHowToPlay = true }
                 } else {
                     // 低い画面や、文字を大きくしたとき（Dynamic Type）は縦に送れるようにする。収まるときは下の注記を画面の下に寄せる
                     ScrollView {
-                        CompactTitleLayout(height: proxy.size.height, onStartExpress: onStartExpress, onOpenSettings: onOpenSettings)
+                        CompactTitleLayout(
+                            height: proxy.size.height,
+                            onStartExpress: onStartExpress,
+                            onOpenSettings: onOpenSettings
+                        ) { showsHowToPlay = true }
                             .frame(maxWidth: 480)
                             .frame(maxWidth: .infinity, minHeight: proxy.size.height)
                     }
                     .scrollBounceBehavior(.basedOnSize)
                 }
+                if showsHowToPlay {
+                    HowToPlayOverlay(wide: wide) { showsHowToPlay = false }
+                        .transition(.opacity)
+                }
             }
         }
+        .animation(.easeInOut(duration: 0.2), value: showsHowToPlay)
         .preferredColorScheme(.light)
     }
 }
@@ -125,6 +136,7 @@ private struct CompactTitleLayout: View {
     let height: CGFloat
     let onStartExpress: () -> Void
     let onOpenSettings: () -> Void
+    let onShowHowToPlay: () -> Void
 
     /// iPhone SE のように低い画面では、指差す手の絵を低くする
     private var isShort: Bool {
@@ -135,8 +147,9 @@ private struct CompactTitleLayout: View {
         VStack(spacing: 12) {
             HStack {
                 CorporateMasthead(hatSize: CGSize(width: 34, height: 22), fontSize: 11)
+                Spacer(minLength: 0)
+                HowToPlayButton(action: onShowHowToPlay)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
             // 縦に送れる中では高さを伸び縮みさせても縮まないので、低い画面では絵の高さを決めて小さくする（主ボタンを最初の画面に収める）
             RecruitPoster(imageHeight: isShort ? 120...120 : 212...212, headlineSize: isShort ? 34 : 42, showsStation: true)
             VStack(spacing: 2) {
@@ -166,6 +179,7 @@ private struct CompactTitleLayout: View {
 private struct WideTitleLayout: View {
     let onStartExpress: () -> Void
     let onOpenSettings: () -> Void
+    let onShowHowToPlay: () -> Void
 
     var body: some View {
         VStack(spacing: 14) {
@@ -173,6 +187,7 @@ private struct WideTitleLayout: View {
                 CorporateMasthead()
                 Spacer()
                 // デザインは「強化・ランキング・設定」。強化とランキングは、行き先の画面ができたら並べる
+                HowToPlayButton(action: onShowHowToPlay)
                 TextLink(title: "設定", action: onOpenSettings)
                     .keyboardShortcut(",", modifiers: .command)
             }

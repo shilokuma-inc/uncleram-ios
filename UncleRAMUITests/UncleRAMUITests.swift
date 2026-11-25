@@ -93,6 +93,22 @@ final class UncleRAMUITests: XCTestCase {
         XCTAssertTrue(app.buttons["もう一度献上する"].waitForExistence(timeout: 5))
     }
 
+    /// タイトルの「?」で遊び方の 3 コマが開き、「閉じる」（×）で閉じる
+    @MainActor
+    func testHowToPlayOpensAndCloses() throws {
+        let app = launch()
+
+        let help = app.buttons["遊び方"]
+        XCTAssertTrue(help.waitForExistence(timeout: 5))
+        help.tap()
+        let close = app.buttons["閉じる"]
+        XCTAssertTrue(close.waitForExistence(timeout: 5))
+        close.tap()
+        let dismissed = expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: close)
+        wait(for: [dismissed], timeout: 5)
+        XCTAssertTrue(app.buttons["献上をはじめる"].isHittable)
+    }
+
     /// タイトルの「設定」で設定が開き、「閉じる」でタイトルに戻る
     @MainActor
     func testSettingsOpensAndCloses() throws {

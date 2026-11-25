@@ -6,6 +6,8 @@ struct CompactRoundLayout: View {
     let bench: BenchRunner
     /// 画面の高さ。iPhone SE のように低い画面では、数字とボタンを小さくする
     let height: CGFloat
+    /// 「?」で遊び方の 3 コマを開く
+    let onShowHowToPlay: () -> Void
 
     private var isShort: Bool {
         height < 760
@@ -69,6 +71,9 @@ struct CompactRoundLayout: View {
             }
             Spacer()
             BenchButton(bench: bench)
+            // 献上中は開かない（長押しを邪魔しないように）
+            HowToPlayButton(action: onShowHowToPlay)
+                .disabled(engine.phase == .donating)
         }
     }
 }

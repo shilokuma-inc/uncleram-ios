@@ -11,6 +11,8 @@ struct RoundScreen: View {
     @State private var bench: BenchRunner
     /// 最初の 1 回で覚えることの吹き出し
     @State private var coach = TutorialCoach()
+    /// 「?」から開く遊び方の 3 コマ
+    @State private var showsHowToPlay = false
     @Environment(\.scenePhase) private var scenePhase
     @Environment(LocalStore.self) private var store: LocalStore?
     /// 回収演出の「結果を見る」を押したか。結果の段階を出たら（次のラウンド・タイトル）戻す。
@@ -36,12 +38,17 @@ struct RoundScreen: View {
                     // 練習ラウンドでは兆しを大きく出す（ノイズを濃くする）
                     InkNoise(intensity: engine.plan?.isPractice == true ? 1.6 : 1).ignoresSafeArea()
                 }
+                if showsHowToPlay {
+                    HowToPlayOverlay(wide: wide) { showsHowToPlay = false }
+                        .transition(.opacity)
+                }
             }
         }
         .overlay(alignment: .bottom) {
             BenchStatusBar(bench: bench)
         }
         .preferredColorScheme(.light)
+        .animation(.easeInOut(duration: 0.2), value: showsHowToPlay)
         .environment(coach)
         .onAppear {
             if let scene = ScreenshotDemo.scene {
@@ -139,9 +146,9 @@ struct RoundScreen: View {
             )
         default:
             if wide {
-                WideRoundLayout(engine: engine, bench: bench)
+                WideRoundLayout(engine: engine, bench: bench) { showsHowToPlay = true }
             } else {
-                CompactRoundLayout(engine: engine, bench: bench, height: size.height)
+                CompactRoundLayout(engine: engine, bench: bench, height: size.height) { showsHowToPlay = true }
                     .frame(maxWidth: 480)
             }
         }

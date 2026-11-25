@@ -14,7 +14,7 @@ struct AppRoot: View {
     /// 撮影モードのラウンドの場面と、起動引数での計測は、タイトルを通さずにラウンドを開く
     static var initialDestination: Destination {
         switch ScreenshotDemo.scene {
-        case .title:
+        case .title, .howToPlay:
             return .title
         case .settings:
             return .settings
