@@ -33,21 +33,21 @@ struct WideRoundLayout: View {
                     .frame(width: 44, height: 29)
                     .accessibilityHidden(true)
                 Text(verbatim: "ALLOCATE CORP.")
-                    .font(Theme.typewriter(14))
+                    .scaledFont(.typewriter(14))
                     .tracking(1.1)
                 Text("全人類の RAM を、ひとつの AI に。")
-                    .font(Theme.mincho(14))
+                    .scaledFont(.mincho(14))
                     .tracking(0.5)
                     .foregroundStyle(Theme.red)
             }
             Spacer()
             HStack(alignment: .firstTextBaseline, spacing: 28) {
                 Text("速達便")
-                    .font(Theme.typewriter(12))
+                    .scaledFont(.typewriter(12))
                     .tracking(1)
                     .foregroundStyle(Theme.subText)
                 Text("取引先: \(engine.client.name)")
-                    .font(Theme.mincho(15))
+                    .scaledFont(.mincho(15))
                 BenchButton(bench: bench)
             }
         }
@@ -60,7 +60,8 @@ struct WideRoundLayout: View {
                     .resizable()
                     .scaledToFill()
                     .frame(maxWidth: .infinity)
-                    .frame(height: 300)
+                    // 文字を大きくすると（Dynamic Type）会長の欄が伸びるので、その分だけ絵を低くして 1 画面に収める
+                    .frame(minHeight: 160, maxHeight: 300)
                     .clipped()
                     .allowsHitTesting(false)
                     .overlay(alignment: .bottom) {
@@ -74,7 +75,7 @@ struct WideRoundLayout: View {
                     .font(Theme.display(34))
                     .foregroundStyle(Theme.red)
                 Text("あなたの RAM が必要だ")
-                    .font(Theme.mincho(12))
+                    .scaledFont(.mincho(12))
                     .tracking(1.4)
                     .foregroundStyle(Theme.subText)
                     .padding(.top, 4)
@@ -114,12 +115,12 @@ struct WideRoundLayout: View {
                 #if os(macOS)
                 HStack(spacing: 10) {
                     Text(verbatim: "space")
-                        .font(Theme.typewriter(12))
+                        .scaledFont(.typewriter(12))
                         .padding(.horizontal, 10)
                         .padding(.vertical, 3)
                         .overlay { Rectangle().strokeBorder(Theme.navy, lineWidth: 1.5) }
                     Text("クリックの長押しでも献上できます")
-                        .font(Theme.mincho(13, .medium))
+                        .scaledFont(.mincho(13, .medium))
                         .foregroundStyle(Theme.subText)
                 }
                 #endif
@@ -131,8 +132,14 @@ struct WideRoundLayout: View {
     private var rightColumn: some View {
         VStack(spacing: 16) {
             VStack(spacing: 6) {
-                Airship(stage: engine.hintStage, baseSize: CGSize(width: 200, height: 150), showsLabel: false)
-                    .frame(height: 210)
+                // 文字を大きくすると明細が伸びるので、その分だけ飛行船の欄を低くする。
+                // 飛行船は、警告（3 段階目）で 1.3 倍になっても欄に収まる大きさにする
+                GeometryReader { proxy in
+                    let height = min(150, proxy.size.height / 1.3)
+                    Airship(stage: engine.hintStage, baseSize: CGSize(width: height * 4 / 3, height: height), showsLabel: false)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                .frame(minHeight: 90, maxHeight: 210)
                 HintIndicator(stage: ChairmanLines.displayedStage(engine), fontSize: 13)
             }
             .padding(.vertical, 14)
@@ -149,10 +156,10 @@ struct WideRoundLayout: View {
             Spacer()
             #if os(macOS)
             Text("space 長押し: 献上")
-                .font(Theme.typewriter(12))
+                .scaledFont(.typewriter(12))
             #endif
         }
-        .font(Theme.mincho(12, .medium))
+        .scaledFont(.mincho(12, .medium))
         .foregroundStyle(Theme.subText)
         .padding(.top, 8)
         .overlay(alignment: .top) { DashedRule() }
@@ -178,7 +185,7 @@ struct DonationStatement: View {
         TimelineView(.animation(minimumInterval: 0.1, paused: engine.phase != .donating)) { _ in
             VStack(alignment: .leading, spacing: 11) {
                 Text("献上中の明細")
-                    .font(Theme.mincho(12))
+                    .scaledFont(.mincho(12))
                     .tracking(3.6)
                     .foregroundStyle(Theme.red)
                 row("端末", DeviceDescription.current)
@@ -187,30 +194,39 @@ struct DonationStatement: View {
                 DashedRule()
                 HStack(alignment: .firstTextBaseline) {
                     Text("Mac で増設すると")
-                        .font(Theme.mincho(14))
+                        .scaledFont(.mincho(14))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                     Spacer()
                     Text(verbatim: price.formatted(price.amount(for: engine.donatedBytes)))
                         .font(Theme.display(22))
                     Text("相当")
-                        .font(Theme.mincho(12))
+                        .scaledFont(.mincho(12))
                 }
                 HStack(alignment: .firstTextBaseline) {
                     Text("\(engine.client.name)の買取額")
-                        .font(Theme.mincho(14))
+                        .scaledFont(.mincho(14))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                     Spacer()
                     Text(verbatim: price.formatted(0))
                         .font(Theme.display(22))
                         .foregroundStyle(Theme.red)
                 }
+                // 換算額の根拠（単価・時点・税の扱い）は、文字を大きくしても切らずに出す（docs/SPEC.md「金額の表示」の 1.1.6）
                 VStack(alignment: .leading, spacing: 2) {
                     Text("公式ストアの増設価格 1GB \(price.formattedPricePerGigabyte)")
-                    HStack(spacing: 6) {
-                        Text(verbatim: price.note)
-                        Text(verbatim: price.changeNote)
-                            .foregroundStyle(Theme.red)
+                        .fixedSize(horizontal: false, vertical: true)
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 6) {
+                            priceNote
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            priceNote
+                        }
                     }
                 }
-                .font(Theme.mincho(11, .medium))
+                .scaledFont(.mincho(11, .medium))
                 .foregroundStyle(Theme.subText)
             }
         }
@@ -219,16 +235,22 @@ struct DonationStatement: View {
         .doubleFrame()
     }
 
+    @ViewBuilder private var priceNote: some View {
+        Text(verbatim: price.note)
+        Text(verbatim: price.changeNote)
+            .foregroundStyle(Theme.red)
+    }
+
     private func row(_ title: LocalizedStringKey, _ value: String, typewriter: Bool = false) -> some View {
         HStack(alignment: .firstTextBaseline) {
             Text(title)
             Spacer()
             Text(verbatim: value)
-                .font(typewriter ? Theme.typewriter(14) : Theme.mincho(14, .medium))
+                .scaledFont(typewriter ? .typewriter(14) : .mincho(14, .medium))
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
         }
-        .font(Theme.mincho(14, .medium))
+        .scaledFont(.mincho(14, .medium))
     }
 }
 

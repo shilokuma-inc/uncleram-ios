@@ -70,6 +70,45 @@ enum Theme {
     }
 }
 
+extension Theme {
+    /// Dynamic Type に合わせて大きくする文字の書体（説明・台詞・ラベル）
+    enum ScaledText {
+        case mincho(CGFloat, MinchoWeight = .bold)
+        case typewriter(CGFloat)
+    }
+}
+
+extension View {
+    /// 説明・台詞・ラベルの書体。Dynamic Type に合わせて、本文（body）と同じ割合で大きくする。
+    /// 大きな数字・ボタンの中・判子・絵に添えた文字は、レイアウトを保つため `.font(Theme.…)` のまま大きさを変えない。
+    /// 大きくするのは「さらに大きな文字」を使わない範囲（xxxLarge）まで（2026-11-26 にユーザーが決定。UncleRAM.swift で上限を決める）
+    func scaledFont(_ text: Theme.ScaledText) -> some View {
+        modifier(ScaledFontModifier(text: text))
+    }
+}
+
+private struct ScaledFontModifier: ViewModifier {
+    let text: Theme.ScaledText
+    @ScaledMetric private var size: CGFloat
+
+    init(text: Theme.ScaledText) {
+        self.text = text
+        switch text {
+        case let .mincho(size, _), let .typewriter(size):
+            _size = ScaledMetric(wrappedValue: size, relativeTo: .body)
+        }
+    }
+
+    func body(content: Content) -> some View {
+        switch text {
+        case let .mincho(_, weight):
+            content.font(Theme.mincho(size, weight))
+        case .typewriter:
+            content.font(Theme.typewriter(size))
+        }
+    }
+}
+
 extension Color {
     init(hex: UInt32) {
         self.init(

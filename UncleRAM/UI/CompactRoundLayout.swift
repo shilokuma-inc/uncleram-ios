@@ -21,17 +21,20 @@ struct CompactRoundLayout: View {
                 leaning: ChairmanLines.isLeaning(engine)
             )
             DonationReadout(engine: engine, numberSize: isShort ? 46 : 58, unitSize: isShort ? 16 : 20)
-            ZStack(alignment: .topTrailing) {
-                Group {
-                    if case let .unavailable(reason) = engine.phase {
-                        UnavailableNotice(reason: reason)
-                    } else {
-                        HoldButton(engine: engine, diameter: isShort ? 150 : 200)
+            // ボタンは残りの高さに収める。文字を大きくすると（Dynamic Type）上の欄が伸びるので、その分ボタンが縮む
+            GeometryReader { proxy in
+                ZStack(alignment: .topTrailing) {
+                    Group {
+                        if case let .unavailable(reason) = engine.phase {
+                            UnavailableNotice(reason: reason)
+                        } else {
+                            HoldButton(engine: engine, diameter: buttonDiameter(fitting: proxy.size.height))
+                        }
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    Airship(stage: engine.hintStage, baseSize: isShort ? Self.shortAirshipSize : Airship.defaultSize)
+                        .padding(.top, 2)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                Airship(stage: engine.hintStage)
-                    .padding(.top, 2)
             }
             PriceFooter(engine: engine, compact: isShort)
         }
@@ -41,15 +44,23 @@ struct CompactRoundLayout: View {
         .foregroundStyle(Theme.navy)
     }
 
+    /// 低い画面の飛行船。警告（3 段階目）で大きくなっても、尾がボタンにかからない大きさ
+    private static let shortAirshipSize = CGSize(width: 80, height: 55)
+
+    /// ボタンの直径。画面の高さで決めた大きさを上限に、ボタンの欄の高さ（外の輪と余白を含めて直径の約 1.12 倍）に収める
+    private func buttonDiameter(fitting height: CGFloat) -> CGFloat {
+        min(isShort ? 150 : 200, max(110, height / 1.12))
+    }
+
     private var header: some View {
         HStack(alignment: .bottom) {
             VStack(alignment: .leading, spacing: 2) {
                 Text("速達便")
-                    .font(Theme.typewriter(12))
+                    .scaledFont(.typewriter(12))
                     .tracking(1)
                     .foregroundStyle(Theme.subText)
                 Text("取引先: \(engine.client.name)")
-                    .font(Theme.mincho(15))
+                    .scaledFont(.mincho(15))
             }
             Spacer()
             BenchButton(bench: bench)
@@ -69,7 +80,7 @@ struct DonationReadout: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("献上中（実測）")
-                .font(Theme.typewriter(footnoteSize - 1))
+                .scaledFont(.typewriter(footnoteSize - 1))
                 .foregroundStyle(Theme.red)
             TimelineView(.animation(paused: engine.phase != .donating)) { _ in
                 VStack(alignment: .leading, spacing: 8) {
@@ -92,7 +103,7 @@ struct DonationReadout: View {
                     Text(budgetNote)
                 }
             }
-            .font(Theme.mincho(footnoteSize, .medium))
+            .scaledFont(.mincho(footnoteSize, .medium))
             .foregroundStyle(Theme.subText)
             .padding(.top, 14)
         }
@@ -110,12 +121,12 @@ struct PriceFooter: View {
             TimelineView(.animation(minimumInterval: 0.1, paused: engine.phase != .donating)) { _ in
                 HStack(alignment: .firstTextBaseline) {
                     Text("Mac で増設すると")
-                        .font(Theme.mincho(12))
+                        .scaledFont(.mincho(12))
                     Spacer()
                     Text(verbatim: price.formatted(price.amount(for: engine.donatedBytes)))
                         .font(Theme.display(17))
                     Text("相当")
-                        .font(Theme.mincho(12))
+                        .scaledFont(.mincho(12))
                 }
             }
             .padding(.vertical, compact ? 4 : 6)
@@ -129,7 +140,10 @@ struct PriceFooter: View {
                 Text(verbatim: price.changeNote)
                     .foregroundStyle(Theme.red)
             }
-            .font(Theme.mincho(compact ? 10 : 11, .medium))
+            .scaledFont(.mincho(compact ? 10 : 11, .medium))
+            // 文字を大きくしても 1 行ずつに収め、ボタンの欄より先に場所を取る（根拠が画面の外に押し出されないように）
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
         }
     }
 }

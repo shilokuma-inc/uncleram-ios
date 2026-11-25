@@ -55,7 +55,7 @@ struct HintIndicator: View {
                 .overlay { Rectangle().strokeBorder(Theme.navy, lineWidth: 1) }
             }
         }
-        .font(Theme.mincho(fontSize, .medium))
+        .scaledFont(.mincho(fontSize, .medium))
         .foregroundStyle(Theme.subText)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(label))
@@ -112,7 +112,7 @@ struct ChairmanPanel: View {
                 }
             VStack(alignment: .leading, spacing: 6) {
                 Text(line)
-                    .font(Theme.mincho(15))
+                    .scaledFont(.mincho(15))
                     .lineSpacing(5)
                     .foregroundStyle(Theme.navy)
                     .fixedSize(horizontal: false, vertical: true)
@@ -181,7 +181,7 @@ struct DonationGauge: View {
             .overlay {
                 if showsSafetyLabel {
                     Text("▲ 安全ライン")
-                        .font(Theme.mincho(12))
+                        .scaledFont(.mincho(12))
                         .foregroundStyle(Theme.navy)
                         .fixedSize()
                         .position(x: proxy.size.width * safetyLine, y: height + 12)
@@ -258,8 +258,10 @@ struct HoldButtonFace: View {
 
 /// 回収飛行船。段階が上がるほど大きく、近くに寄ってくる
 struct Airship: View {
+    static let defaultSize = CGSize(width: 104, height: 72)
+
     let stage: RoundPlan.HintStage
-    var baseSize = CGSize(width: 104, height: 72)
+    var baseSize = Airship.defaultSize
     var showsLabel = true
 
     private var scale: CGFloat {
