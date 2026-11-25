@@ -5,6 +5,8 @@ import SwiftUI
 struct WideRoundLayout: View {
     let engine: RoundEngine
     let bench: BenchRunner
+    /// 「?」で遊び方の 3 コマを開く
+    let onShowHowToPlay: () -> Void
     @Environment(LocalStore.self) private var store: LocalStore?
 
     /// 設定「タップで献上」
@@ -42,6 +44,9 @@ struct WideRoundLayout: View {
                 Text("取引先: \(engine.client.name)")
                     .scaledFont(.mincho(15))
                 BenchButton(bench: bench)
+                // 献上中は開かない（長押しを邪魔しないように）
+                HowToPlayButton(action: onShowHowToPlay)
+                    .disabled(engine.phase == .donating)
             }
         }
     }
