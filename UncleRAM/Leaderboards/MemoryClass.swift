@@ -29,9 +29,9 @@ nonisolated enum MemoryClass: String, Sendable, Codable, CaseIterable {
     case iosMedium = "ios_m"
     /// iPhone・iPad の 16GB 以上
     case iosLarge = "ios_l"
-    /// Mac の 16GB 以下。18GB も入れる
+    /// Mac の 18GB 以下
     case macSmall = "mac_s"
-    /// Mac の 24〜32GB。36GB も入れる
+    /// Mac の 24〜36GB
     case macMedium = "mac_m"
     /// Mac の 48GB 以上
     case macLarge = "mac_l"
@@ -87,9 +87,10 @@ nonisolated struct DeviceMemoryProfile: Sendable, Equatable {
         DeviceMemoryProfile(kind: .current, physicalMemory: ProcessInfo.processInfo.physicalMemory)
     }
 
-    /// 献上量のクラス。iPhone・iPad は 8GB 以下 / 12GB / 16GB 以上、Mac は 16GB 以下 / 24–32GB / 48GB 以上。
+    /// 献上量のクラス。iPhone・iPad は 8GB 以下 / 12GB / 16GB 以上、Mac は 18GB 以下 / 24–36GB / 48GB 以上。
     ///
-    /// 間に入る Mac の 18GB と 36GB は、枠の上限（搭載メモリの 50%）が近い下のクラスに入れる（18GB は 16GB 以下、36GB は 24–32GB）
+    /// Mac の 18GB と 36GB は、枠の上限（搭載メモリの 50%）が近い下のクラスに入れる（18GB は 18GB 以下、36GB は 24–36GB。
+    /// 2026-11-26 にユーザーが決め、ランキングの名前も「16GB 以下」「24〜32GB」から広げた）
     var memoryClass: MemoryClass {
         switch kind {
         case .iPhone, .iPad:
