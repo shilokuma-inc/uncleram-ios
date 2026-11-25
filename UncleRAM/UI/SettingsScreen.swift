@@ -89,6 +89,8 @@ struct SettingsScreen: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
+                // Mac の既定はチェックボックスなので、iPhone と同じスイッチにそろえる
+                .toggleStyle(.switch)
                 .tint(Theme.red)
             }
             section("資料") {
