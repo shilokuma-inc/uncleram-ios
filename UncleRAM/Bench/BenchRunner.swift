@@ -96,6 +96,11 @@ final class BenchRunner {
     }
 
     /// 起動引数で頼まれていれば始める
+    /// 起動引数で計測を頼まれているか（`-bench <ラウンド数>`）。そのときはタイトルを通さずにラウンド画面を開く
+    static var isRequestedByLaunchArguments: Bool {
+        ProcessInfo.processInfo.arguments.contains("-bench")
+    }
+
     func startFromLaunchArgumentsIfNeeded() {
         let arguments = ProcessInfo.processInfo.arguments
         guard let index = arguments.firstIndex(of: "-bench"), arguments.indices.contains(index + 1),

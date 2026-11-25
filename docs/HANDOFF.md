@@ -156,6 +156,7 @@
    - プライバシーマニフェスト
    - 暗号化の申告（ITSAppUsesNonExemptEncryption = NO）
    - Universal Links（Associated Domains と apple-app-site-association）
+   - デイリーの通し番号の起点を公開日に直す（今は仮に 2026-12-01（世界標準時）を #1 にしている。`UncleRAM/Game/DailyChallenge.swift` の `firstDay`）
 
 遅れそうなときは、次の順に後回しにします。社内報フィード → 代替アイコン → 社章スキン集 → リアロック・データセンター。
 

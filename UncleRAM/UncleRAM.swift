@@ -25,10 +25,9 @@ struct UncleRAM: App {
         #endif
     }
 
-    /// 撮影モード（ScreenshotDemo）のときも、ラウンド画面を開く
+    /// 撮影モード（ScreenshotDemo）のラウンドの場面と計測のときは、タイトルを通さずにラウンド画面を開く（AppRoot）
     @ViewBuilder private var rootView: some View {
-        // 撮影モードの場面は RoundScreen が開く（ScreenshotDemo.Scene はどれもラウンド画面の状態）
-        RoundScreen()
+        AppRoot()
             // 文字は「さらに大きな文字」を使わない範囲（xxxLarge、本文で約 135%）まで大きくする。
             // ラウンドは長押しで遊ぶので、スクロールさせずに 1 画面に収める（2026-11-26 にユーザーが決定）
             .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
