@@ -2,9 +2,10 @@ import SwiftUI
 
 /// 画面の行き来（タイトル → 速達便のラウンド → 結果 → タイトル、タイトル → 設定）と、初回の案内
 struct AppRoot: View {
-    enum Destination {
+    enum Destination: Equatable {
         case title
         case express
+        case daily(DailyChallenge)
         case settings
     }
 
@@ -18,6 +19,8 @@ struct AppRoot: View {
             return .title
         case .settings:
             return .settings
+        case .dailyDelivered:
+            return .daily(.today())
         case .some:
             return .express
         case nil:
@@ -38,12 +41,21 @@ struct AppRoot: View {
                 case .title:
                     TitleScreen(
                         onStartExpress: { destination = .express },
+                        onStartDaily: { destination = .daily($0) },
                         onOpenSettings: { destination = .settings }
                     )
                     .transition(.opacity)
                 case .express:
                     RoundScreen(onExit: { destination = .title })
                         .transition(.opacity)
+                case let .daily(challenge):
+                    // その日の種から作った乱数で、最初のラウンドがその日の条件になる（全員同じ回収ライン）
+                    RoundScreen(
+                        engine: RoundEngine(client: DailyChallenge.client, random: challenge.makeRandom()),
+                        mode: .daily(challenge),
+                        onExit: { destination = .title }
+                    )
+                    .transition(.opacity)
                 case .settings:
                     SettingsScreen(
                         onClose: { destination = .title },
