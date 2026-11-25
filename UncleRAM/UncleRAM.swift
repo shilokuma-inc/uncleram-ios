@@ -29,5 +29,8 @@ struct UncleRAM: App {
     @ViewBuilder private var rootView: some View {
         // 撮影モードの場面は RoundScreen が開く（ScreenshotDemo.Scene はどれもラウンド画面の状態）
         RoundScreen()
+            // 文字は「さらに大きな文字」を使わない範囲（xxxLarge、本文で約 135%）まで大きくする。
+            // ラウンドは長押しで遊ぶので、スクロールさせずに 1 画面に収める（2026-11-26 にユーザーが決定）
+            .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
     }
 }

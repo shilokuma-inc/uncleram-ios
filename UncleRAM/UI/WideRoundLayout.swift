@@ -33,21 +33,21 @@ struct WideRoundLayout: View {
                     .frame(width: 44, height: 29)
                     .accessibilityHidden(true)
                 Text(verbatim: "ALLOCATE CORP.")
-                    .font(Theme.typewriter(14))
+                    .scaledFont(.typewriter(14))
                     .tracking(1.1)
                 Text("全人類の RAM を、ひとつの AI に。")
-                    .font(Theme.mincho(14))
+                    .scaledFont(.mincho(14))
                     .tracking(0.5)
                     .foregroundStyle(Theme.red)
             }
             Spacer()
             HStack(alignment: .firstTextBaseline, spacing: 28) {
                 Text("速達便")
-                    .font(Theme.typewriter(12))
+                    .scaledFont(.typewriter(12))
                     .tracking(1)
                     .foregroundStyle(Theme.subText)
                 Text("取引先: \(engine.client.name)")
-                    .font(Theme.mincho(15))
+                    .scaledFont(.mincho(15))
                 BenchButton(bench: bench)
             }
         }
@@ -74,7 +74,7 @@ struct WideRoundLayout: View {
                     .font(Theme.display(34))
                     .foregroundStyle(Theme.red)
                 Text("あなたの RAM が必要だ")
-                    .font(Theme.mincho(12))
+                    .scaledFont(.mincho(12))
                     .tracking(1.4)
                     .foregroundStyle(Theme.subText)
                     .padding(.top, 4)
@@ -114,12 +114,12 @@ struct WideRoundLayout: View {
                 #if os(macOS)
                 HStack(spacing: 10) {
                     Text(verbatim: "space")
-                        .font(Theme.typewriter(12))
+                        .scaledFont(.typewriter(12))
                         .padding(.horizontal, 10)
                         .padding(.vertical, 3)
                         .overlay { Rectangle().strokeBorder(Theme.navy, lineWidth: 1.5) }
                     Text("クリックの長押しでも献上できます")
-                        .font(Theme.mincho(13, .medium))
+                        .scaledFont(.mincho(13, .medium))
                         .foregroundStyle(Theme.subText)
                 }
                 #endif
@@ -149,10 +149,10 @@ struct WideRoundLayout: View {
             Spacer()
             #if os(macOS)
             Text("space 長押し: 献上")
-                .font(Theme.typewriter(12))
+                .scaledFont(.typewriter(12))
             #endif
         }
-        .font(Theme.mincho(12, .medium))
+        .scaledFont(.mincho(12, .medium))
         .foregroundStyle(Theme.subText)
         .padding(.top, 8)
         .overlay(alignment: .top) { DashedRule() }
@@ -178,7 +178,7 @@ struct DonationStatement: View {
         TimelineView(.animation(minimumInterval: 0.1, paused: engine.phase != .donating)) { _ in
             VStack(alignment: .leading, spacing: 11) {
                 Text("献上中の明細")
-                    .font(Theme.mincho(12))
+                    .scaledFont(.mincho(12))
                     .tracking(3.6)
                     .foregroundStyle(Theme.red)
                 row("端末", DeviceDescription.current)
@@ -187,16 +187,16 @@ struct DonationStatement: View {
                 DashedRule()
                 HStack(alignment: .firstTextBaseline) {
                     Text("Mac で増設すると")
-                        .font(Theme.mincho(14))
+                        .scaledFont(.mincho(14))
                     Spacer()
                     Text(verbatim: price.formatted(price.amount(for: engine.donatedBytes)))
                         .font(Theme.display(22))
                     Text("相当")
-                        .font(Theme.mincho(12))
+                        .scaledFont(.mincho(12))
                 }
                 HStack(alignment: .firstTextBaseline) {
                     Text("\(engine.client.name)の買取額")
-                        .font(Theme.mincho(14))
+                        .scaledFont(.mincho(14))
                     Spacer()
                     Text(verbatim: price.formatted(0))
                         .font(Theme.display(22))
@@ -210,7 +210,7 @@ struct DonationStatement: View {
                             .foregroundStyle(Theme.red)
                     }
                 }
-                .font(Theme.mincho(11, .medium))
+                .scaledFont(.mincho(11, .medium))
                 .foregroundStyle(Theme.subText)
             }
         }
@@ -224,11 +224,11 @@ struct DonationStatement: View {
             Text(title)
             Spacer()
             Text(verbatim: value)
-                .font(typewriter ? Theme.typewriter(14) : Theme.mincho(14, .medium))
+                .scaledFont(typewriter ? .typewriter(14) : .mincho(14, .medium))
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
         }
-        .font(Theme.mincho(14, .medium))
+        .scaledFont(.mincho(14, .medium))
     }
 }
 

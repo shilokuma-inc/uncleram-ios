@@ -26,7 +26,7 @@ struct ResultView: View {
                 retryButton
                 if let releaseDuration {
                     Text("解放 \(Int((releaseDuration * 1000).rounded())) ms")
-                        .font(Theme.typewriter(11))
+                        .scaledFont(.typewriter(11))
                         .foregroundStyle(Theme.subText)
                         .frame(maxWidth: .infinity)
                 }
@@ -44,10 +44,10 @@ struct ResultView: View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 6) {
                 Text("速達便 ・ 結果")
-                    .font(Theme.mincho(13))
+                    .scaledFont(.mincho(13))
                     .foregroundStyle(Theme.subText)
                 Text("取引先: \(Client.allocateCorp.name)")
-                    .font(Theme.mincho(16))
+                    .scaledFont(.mincho(16))
             }
             Spacer()
             if let stamp {
@@ -73,7 +73,7 @@ struct ResultView: View {
     private var reveal: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("今回の献上と回収ライン")
-                .font(Theme.mincho(12))
+                .scaledFont(.mincho(12))
                 .foregroundStyle(Theme.subText)
             RevealGauge(released: outcome.releasedFill, line: outcome.plan.collectionLine)
                 .padding(.vertical, 26)
@@ -96,12 +96,12 @@ struct ResultView: View {
         if outcome.isSuccessful {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text("あと")
-                    .font(Theme.mincho(15, .extraBold))
+                    .scaledFont(.mincho(15, .extraBold))
                 Text(verbatim: "\(gap)%")
                     .font(Theme.display(40))
                     .foregroundStyle(Theme.red)
                 Text(verbatim: "！")
-                    .font(Theme.mincho(15, .extraBold))
+                    .scaledFont(.mincho(15, .extraBold))
             }
         } else {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
@@ -109,7 +109,7 @@ struct ResultView: View {
                     .font(Theme.display(40))
                     .foregroundStyle(Theme.red)
                 Text("越えた")
-                    .font(Theme.mincho(15, .extraBold))
+                    .scaledFont(.mincho(15, .extraBold))
             }
         }
     }
@@ -135,7 +135,7 @@ struct ResultView: View {
         HStack(spacing: 6) {
             ChairmanHat(leaning: false, size: CGSize(width: 54, height: 36))
             Text(chairmanLine)
-                .font(Theme.mincho(16))
+                .scaledFont(.mincho(16))
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, 18)
                 .padding(.vertical, 12)
@@ -155,7 +155,7 @@ struct ResultView: View {
             DashedRule()
             HStack(alignment: .firstTextBaseline) {
                 Text("スコア")
-                    .font(Theme.mincho(17, .extraBold))
+                    .scaledFont(.mincho(17, .extraBold))
                 Spacer()
                 Text(verbatim: "\(Formatters.integer(outcome.score)) pt")
                     .font(Theme.display(34))
@@ -168,7 +168,7 @@ struct ResultView: View {
     private func figureRow(_ title: LocalizedStringKey, _ value: String, small: Bool = false) -> some View {
         HStack(alignment: .firstTextBaseline) {
             Text(title)
-                .font(Theme.mincho(17))
+                .scaledFont(.mincho(17))
             Spacer()
             Text(verbatim: value)
                 .font(Theme.display(small ? 15 : 24))
@@ -177,7 +177,7 @@ struct ResultView: View {
 
     private var voidedNotice: some View {
         Text("店じまいしました")
-            .font(Theme.mincho(22))
+            .scaledFont(.mincho(22))
             .frame(maxWidth: .infinity)
             .padding(.vertical, 40)
             .doubleFrame(inset: 8)
@@ -186,7 +186,7 @@ struct ResultView: View {
     private var retryButton: some View {
         Button(action: onRetry) {
             Text("もう一度献上する")
-                .font(Theme.mincho(20, .extraBold))
+                .scaledFont(.mincho(20, .extraBold))
                 .tracking(4)
                 .foregroundStyle(Theme.lightPaper)
                 .frame(maxWidth: .infinity)
@@ -239,11 +239,11 @@ struct RevealGauge: View {
     private func marker(text: LocalizedStringKey, symbol: String, color: Color, above: Bool) -> some View {
         VStack(spacing: 2) {
             if above {
-                Text(text).font(Theme.mincho(13, .extraBold))
+                Text(text).scaledFont(.mincho(13, .extraBold))
                 Text(verbatim: symbol).font(.system(size: 12))
             } else {
                 Text(verbatim: symbol).font(.system(size: 12))
-                Text(text).font(Theme.mincho(13, .extraBold))
+                Text(text).scaledFont(.mincho(13, .extraBold))
             }
         }
         .foregroundStyle(color)

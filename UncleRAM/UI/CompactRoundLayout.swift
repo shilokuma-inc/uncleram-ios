@@ -45,11 +45,11 @@ struct CompactRoundLayout: View {
         HStack(alignment: .bottom) {
             VStack(alignment: .leading, spacing: 2) {
                 Text("速達便")
-                    .font(Theme.typewriter(12))
+                    .scaledFont(.typewriter(12))
                     .tracking(1)
                     .foregroundStyle(Theme.subText)
                 Text("取引先: \(engine.client.name)")
-                    .font(Theme.mincho(15))
+                    .scaledFont(.mincho(15))
             }
             Spacer()
             BenchButton(bench: bench)
@@ -69,7 +69,7 @@ struct DonationReadout: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("献上中（実測）")
-                .font(Theme.typewriter(footnoteSize - 1))
+                .scaledFont(.typewriter(footnoteSize - 1))
                 .foregroundStyle(Theme.red)
             TimelineView(.animation(paused: engine.phase != .donating)) { _ in
                 VStack(alignment: .leading, spacing: 8) {
@@ -92,7 +92,7 @@ struct DonationReadout: View {
                     Text(budgetNote)
                 }
             }
-            .font(Theme.mincho(footnoteSize, .medium))
+            .scaledFont(.mincho(footnoteSize, .medium))
             .foregroundStyle(Theme.subText)
             .padding(.top, 14)
         }
@@ -110,12 +110,12 @@ struct PriceFooter: View {
             TimelineView(.animation(minimumInterval: 0.1, paused: engine.phase != .donating)) { _ in
                 HStack(alignment: .firstTextBaseline) {
                     Text("Mac で増設すると")
-                        .font(Theme.mincho(12))
+                        .scaledFont(.mincho(12))
                     Spacer()
                     Text(verbatim: price.formatted(price.amount(for: engine.donatedBytes)))
                         .font(Theme.display(17))
                     Text("相当")
-                        .font(Theme.mincho(12))
+                        .scaledFont(.mincho(12))
                 }
             }
             .padding(.vertical, compact ? 4 : 6)
@@ -129,7 +129,7 @@ struct PriceFooter: View {
                 Text(verbatim: price.changeNote)
                     .foregroundStyle(Theme.red)
             }
-            .font(Theme.mincho(compact ? 10 : 11, .medium))
+            .scaledFont(.mincho(compact ? 10 : 11, .medium))
         }
     }
 }
