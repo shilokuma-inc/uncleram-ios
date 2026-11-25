@@ -268,7 +268,17 @@ struct StripedInk: View {
 struct HoldButtonFace: View {
     let holding: Bool
     var diameter: CGFloat = 200
-    var title: LocalizedStringKey = "長押しで献上"
+    /// 設定「タップで献上」のときは、文言を「タップで献上」「もう一度で納品」にする
+    var tapToDonate = false
+
+    /// 押す前の文言。Mac はスペースキーで遊ぶ（クリックでも遊べる）
+    private var title: LocalizedStringKey {
+        #if os(macOS)
+        tapToDonate ? "スペースで献上" : "スペースを長押し"
+        #else
+        tapToDonate ? "タップで献上" : "長押しで献上"
+        #endif
+    }
 
     var body: some View {
         ZStack {
@@ -280,7 +290,7 @@ struct HoldButtonFace: View {
                 .strokeBorder(Theme.lightPaper, lineWidth: 1.3)
                 .padding(2.7)
             VStack(spacing: diameter * 0.03) {
-                Text(holding ? "HOLDING" : "PRESS & HOLD")
+                Text(verbatim: tapToDonate ? (holding ? "DONATING" : "TAP") : (holding ? "HOLDING" : "PRESS & HOLD"))
                     .font(Theme.display(diameter * 0.055))
                     .tracking(diameter * 0.011)
                 Text(holding ? "献上中" : title)
@@ -289,7 +299,7 @@ struct HoldButtonFace: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
                     .padding(.horizontal, diameter * 0.1)
-                Text("離すと納品")
+                Text(tapToDonate ? "もう一度で納品" : "離すと納品")
                     .font(Theme.mincho(diameter * 0.06))
                     .tracking(diameter * 0.006)
             }

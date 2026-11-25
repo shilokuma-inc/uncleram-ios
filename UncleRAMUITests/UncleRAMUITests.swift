@@ -15,9 +15,10 @@ final class UncleRAMUITests: XCTestCase {
 
     /// 起動する。初回の案内を閉じたかは、起動引数（UserDefaults の引数のドメイン）で決めて、前のテストの状態に左右されないようにする
     @MainActor
-    private func launch(acknowledgedSafetyNotice: Bool = true) -> XCUIApplication {
+    private func launch(acknowledgedSafetyNotice: Bool = true, tapToDonate: Bool = false) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += ["-hasAcknowledgedSafetyNotice", acknowledgedSafetyNotice ? "YES" : "NO"]
+        app.launchArguments += ["-tapToDonate", tapToDonate ? "YES" : "NO"]
         app.launch()
         return app
     }
@@ -76,6 +77,32 @@ final class UncleRAMUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["ラインはここだった"].exists)
 
         app.buttons["タイトルへ"].tap()
+        XCTAssertTrue(app.buttons["献上をはじめる"].waitForExistence(timeout: 5))
+    }
+
+    /// 設定「タップで献上」のときは、1 回目のタップで献上を始め、もう一度タップすると納品する
+    @MainActor
+    func testTapToDonateStartsAndDelivers() throws {
+        let app = launch(tapToDonate: true)
+        openRound(app)
+
+        let button = app.buttons["献上する"]
+        button.tap()
+        sleep(1)
+        button.tap()
+        XCTAssertTrue(app.buttons["もう一度献上する"].waitForExistence(timeout: 5))
+    }
+
+    /// タイトルの「設定」で設定が開き、「閉じる」でタイトルに戻る
+    @MainActor
+    func testSettingsOpensAndCloses() throws {
+        let app = launch()
+
+        let settings = app.buttons["設定"]
+        XCTAssertTrue(settings.waitForExistence(timeout: 5))
+        settings.tap()
+        XCTAssertTrue(app.switches.firstMatch.waitForExistence(timeout: 5))
+        app.buttons["閉じる"].tap()
         XCTAssertTrue(app.buttons["献上をはじめる"].waitForExistence(timeout: 5))
     }
 }

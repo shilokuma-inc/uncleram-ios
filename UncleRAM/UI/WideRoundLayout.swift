@@ -5,6 +5,12 @@ import SwiftUI
 struct WideRoundLayout: View {
     let engine: RoundEngine
     let bench: BenchRunner
+    @Environment(LocalStore.self) private var store: LocalStore?
+
+    /// 設定「タップで献上」
+    private var tapToDonate: Bool {
+        store?.tapToDonate ?? false
+    }
 
     var body: some View {
         VStack(spacing: 14) {
@@ -67,7 +73,7 @@ struct WideRoundLayout: View {
                 if case let .unavailable(reason) = engine.phase {
                     UnavailableNotice(reason: reason)
                 } else {
-                    HoldButton(engine: engine, diameter: 236, title: holdTitle)
+                    HoldButton(engine: engine, diameter: 236)
                 }
                 #if os(macOS)
                 HStack(spacing: 10) {
@@ -76,7 +82,7 @@ struct WideRoundLayout: View {
                         .padding(.horizontal, 10)
                         .padding(.vertical, 3)
                         .overlay { Rectangle().strokeBorder(Theme.navy, lineWidth: 1.5) }
-                    Text("クリックの長押しでも献上できます")
+                    Text(tapToDonate ? "クリックでも献上できます" : "クリックの長押しでも献上できます")
                         .scaledFont(.mincho(13, .medium))
                         .foregroundStyle(Theme.subText)
                 }
@@ -112,7 +118,7 @@ struct WideRoundLayout: View {
             Text("回収ラインが近づくと、会長の言葉・飛行船・画面のノイズが変わります")
             Spacer()
             #if os(macOS)
-            Text("space 長押し: 献上")
+            Text(tapToDonate ? "space: 献上 / 納品" : "space 長押し: 献上")
                 .scaledFont(.typewriter(12))
             #endif
         }
@@ -123,12 +129,10 @@ struct WideRoundLayout: View {
     }
 
     #if os(macOS)
-    private var holdTitle: LocalizedStringKey { "スペースを長押し" }
     private var budgetNote: LocalizedStringKey? {
         HostMemoryProbe.isCapped(budget: engine.budgetBytes) ? "（搭載メモリの 50% か 32GB の上限）" : "（使用可能メモリの 60%）"
     }
     #else
-    private var holdTitle: LocalizedStringKey { "長押しで献上" }
     private var budgetNote: LocalizedStringKey? { nil }
     #endif
 }
