@@ -87,6 +87,61 @@ struct RankingSubmitterTests {
         #expect(store.pendingScores.isEmpty)
     }
 
+    /// デイリーは、読み込んだ今の回の終わりが挑戦した日の 24 時と同じなら、その回に送る（受け取った時点の回には送らない）
+    @Test
+    func dailyIsSentToTheChallengeDaysRound() async throws {
+        let clock = TestClock(now: try Self.date("2026-12-01T23:59:59Z"))
+        let service = FakeLeaderboardService()
+        let store = InMemoryRankingStore()
+        let submitter = RankingSubmitter(service: service, store: store) { clock.now }
+
+        let record = Self.record(.daily(LeaderboardRulesTests.firstDay))
+        service.occurrenceEnd = try Self.date("2026-12-02T00:00:00Z")
+        await submitter.submit(record)
+        #expect(service.submittedToOccurrence == record.leaderboardScores)
+        #expect(service.submitted.isEmpty)
+        #expect(store.pendingScores.isEmpty)
+    }
+
+    /// 読み込んだ回が挑戦した日の回でなければ（読み込む間に日付が変わった、回がまだ無いなど）、送らずに捨てる
+    @Test(arguments: ["2026-12-03T00:00:00Z", nil])
+    func dailyForAnotherRoundIsDiscarded(occurrenceEnd: String?) async throws {
+        let clock = TestClock(now: try Self.date("2026-12-01T23:59:59Z"))
+        let service = FakeLeaderboardService()
+        let store = InMemoryRankingStore()
+        let submitter = RankingSubmitter(service: service, store: store) { clock.now }
+        let record = Self.record(.daily(LeaderboardRulesTests.firstDay))
+
+        // 初めて送るとき
+        service.occurrenceEnd = try occurrenceEnd.map(Self.date)
+        await submitter.submit(record)
+        #expect(service.submittedToOccurrence.isEmpty)
+        #expect(store.pendingScores.isEmpty)
+
+        // 貯まっていたスコアを送り直すとき
+        for score in record.leaderboardScores {
+            store.pendingScores.enqueue(score)
+        }
+        await submitter.resendPending()
+        #expect(service.submittedToOccurrence.isEmpty)
+        #expect(service.submitted.isEmpty)
+        #expect(store.pendingScores.isEmpty)
+    }
+
+    /// 回の終わりと期限は、1 秒未満のずれなら同じ回とみなす。速達便（期限なし）や、回の終わりが分からないときは同じとみなさない
+    @Test
+    func occurrenceMatchingToleratesSubsecondDifference() throws {
+        let midnight = try Self.date("2026-12-02T00:00:00Z")
+        let daily = Self.score("d", 1, expiresAt: midnight)
+        #expect(daily.belongs(toOccurrenceEndingAt: midnight))
+        #expect(daily.belongs(toOccurrenceEndingAt: midnight.addingTimeInterval(0.5)))
+        #expect(daily.belongs(toOccurrenceEndingAt: midnight.addingTimeInterval(-0.5)))
+        #expect(!daily.belongs(toOccurrenceEndingAt: midnight.addingTimeInterval(1)))
+        #expect(!daily.belongs(toOccurrenceEndingAt: midnight.addingTimeInterval(86_400)))
+        #expect(!daily.belongs(toOccurrenceEndingAt: nil))
+        #expect(!Self.score("e", 1).belongs(toOccurrenceEndingAt: midnight))
+    }
+
     /// 速達便には期限が無いので、日が変わっても送り直す
     @Test
     func expressIsResentOnLaterDays() async throws {
