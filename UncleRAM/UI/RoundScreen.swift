@@ -20,9 +20,13 @@ struct RoundScreen: View {
     @State private var revealsResult = ScreenshotDemo.scene == .collected
     /// 結果からタイトルへ戻る。nil のときは「タイトルへ」を出さない
     private let onExit: (() -> Void)?
+    /// 速達便かデイリーか
+    private let mode: RoundMode
 
-    init(engine: RoundEngine = RoundEngine(), onExit: (() -> Void)? = nil) {
+    /// - Parameter mode: デイリーのときは、engine を `DailyChallenge.client` と `makeRandom()` で作って渡す
+    init(engine: RoundEngine = RoundEngine(), mode: RoundMode = .express, onExit: (() -> Void)? = nil) {
         self.onExit = onExit
+        self.mode = mode
         _engine = State(initialValue: engine)
         _monitor = State(initialValue: RoundEventMonitor(engine: engine))
         _bench = State(initialValue: BenchRunner(engine: engine))
@@ -50,6 +54,7 @@ struct RoundScreen: View {
         .preferredColorScheme(.light)
         .animation(.easeInOut(duration: 0.2), value: showsHowToPlay)
         .environment(coach)
+        .environment(\.roundMode, mode)
         .onAppear {
             if let scene = ScreenshotDemo.scene {
                 engine.showDemo(scene)
@@ -59,7 +64,8 @@ struct RoundScreen: View {
             if !BenchRunner.isRequestedByLaunchArguments {
                 coach.store = store
             }
-            engine.isPracticeRound = !(store?.hasCompletedFirstRound ?? true)
+            // デイリーは練習ラウンドにしない（デイリーは、練習を終えてから開く）
+            engine.isPracticeRound = mode.daily == nil && !(store?.hasCompletedFirstRound ?? true)
             monitor.tapToDonate = store?.tapToDonate ?? false
             monitor.start()
             bench.startFromLaunchArgumentsIfNeeded()
@@ -80,6 +86,7 @@ struct RoundScreen: View {
             }
         }
         .onChange(of: engine.phase) { _, phase in
+            recordDaily(phase)
             guard case let .result(outcome) = phase else {
                 // 結果の段階を出たら（次のラウンド・タイトル）、回収演出の「結果を見る」を戻す
                 revealsResult = false
@@ -90,7 +97,7 @@ struct RoundScreen: View {
             if let completed = Self.practiceCompletion(after: outcome) {
                 store?.hasCompletedFirstRound = completed
             }
-            engine.isPracticeRound = !(store?.hasCompletedFirstRound ?? true)
+            engine.isPracticeRound = mode.daily == nil && !(store?.hasCompletedFirstRound ?? true)
         }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
@@ -104,6 +111,23 @@ struct RoundScreen: View {
             @unknown default:
                 break
             }
+        }
+    }
+
+    /// デイリーの 1 日 1 回を記録する。押し始めた時点でその日の 1 回を使い、結果が出たら書き足す（無効も 1 回に数える）
+    private func recordDaily(_ phase: RoundEngine.Phase) {
+        guard let challenge = mode.daily, let store, !engine.isAutomated else {
+            return
+        }
+        switch phase {
+        case .donating:
+            store.dailyRecord = .started(on: challenge.day)
+        case let .result(outcome):
+            if let record = store.dailyRecord, record.isPlayed(on: challenge.day) {
+                store.dailyRecord = record.finished(with: outcome)
+            }
+        default:
+            break
         }
     }
 

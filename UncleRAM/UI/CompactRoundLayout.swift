@@ -3,6 +3,7 @@ import SwiftUI
 /// iPhone（と、狭い iPad）のラウンド画面。docs/design/Round.png（390 × 844）に合わせる
 struct CompactRoundLayout: View {
     let engine: RoundEngine
+    @Environment(\.roundMode) private var roundMode
     let bench: BenchRunner
     /// 画面の高さ。iPhone SE のように低い画面では、数字とボタンを小さくする
     let height: CGFloat
@@ -62,7 +63,7 @@ struct CompactRoundLayout: View {
     private var header: some View {
         HStack(alignment: .bottom) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(engine.isShowingPracticeRound ? "練習 · 速達便" : "速達便")
+                Text(roundMode.title(practice: engine.isShowingPracticeRound))
                     .scaledFont(.typewriter(12))
                     .tracking(1)
                     .foregroundStyle(Theme.subText)
