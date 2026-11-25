@@ -10,6 +10,11 @@ struct ResultView: View {
     let onRetry: () -> Void
     /// タイトルへ戻る。nil のときは出さない
     var onExit: (() -> Void)?
+    /// 「明細書をシェア」で載せるモード。デイリーの結果を出すときは `.daily` を渡す
+    var shareMode = ShareSummary.Mode.express
+
+    /// 共有のプレビューを開いているか
+    @State private var sharesStatement = false
 
     var body: some View {
         ScrollView {
@@ -25,8 +30,16 @@ struct ResultView: View {
                     figures
                 }
                 Spacer(minLength: 24)
-                PrimaryInkButton(title: "もう一度献上する", action: onRetry)
-                    .keyboardShortcut(.defaultAction)
+                if shareSummary != nil {
+                    // デザイン（Reveal.png）どおり、主ボタンを「明細書をシェア」にする。Mac は ⌘S、return は「もう一度」のまま
+                    PrimaryInkButton(title: "明細書をシェア", fontSize: 17, verticalPadding: 15) { sharesStatement = true }
+                        .keyboardShortcut("s", modifiers: .command)
+                    RuleButton(title: "もう一度献上する", action: onRetry)
+                        .keyboardShortcut(.defaultAction)
+                } else {
+                    PrimaryInkButton(title: "もう一度献上する", action: onRetry)
+                        .keyboardShortcut(.defaultAction)
+                }
                 if let onExit {
                     // ラウンドの途中には置かない（結果のときだけ）。Mac は esc でも戻れる
                     TextLink(title: "タイトルへ", action: onExit)
@@ -47,6 +60,16 @@ struct ResultView: View {
         }
         .scrollBounceBehavior(.basedOnSize)
         .foregroundStyle(Theme.navy)
+        .sheet(isPresented: $sharesStatement) {
+            if let shareSummary {
+                SharePreviewScreen(summary: shareSummary)
+            }
+        }
+    }
+
+    /// シェアに載せる結果。無効になったラウンド（店じまい）はシェアしない
+    private var shareSummary: ShareSummary? {
+        ShareSummary(outcome: outcome, mode: shareMode)
     }
 
     private var header: some View {

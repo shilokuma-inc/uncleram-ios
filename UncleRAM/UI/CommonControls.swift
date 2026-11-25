@@ -13,27 +13,86 @@ struct PrimaryInkButton: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(alignment: .firstTextBaseline, spacing: 14) {
-                Text(title)
-                    .scaledFont(.mincho(fontSize, .extraBold))
-                    .tracking(fontSize * 0.2)
-                if let caption {
-                    Text(caption)
-                        .scaledFont(.mincho(13))
-                        .tracking(1)
-                }
-            }
-            .lineLimit(1)
-            .minimumScaleFactor(0.7)
-            .foregroundStyle(Theme.lightPaper)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, verticalPadding)
-            .background { InkSurface(color: color) }
-            .padding(6)
-            .overlay { Rectangle().strokeBorder(Theme.navy, lineWidth: 1.5) }
-            .contentShape(Rectangle())
+            PrimaryInkLabel(title: title, caption: caption, fontSize: fontSize, verticalPadding: verticalPadding, color: color)
         }
         .buttonStyle(.plain)
+    }
+}
+
+/// `PrimaryInkButton` の見た目。`ShareLink` のようにボタンを自分で作る部品の label に使う
+struct PrimaryInkLabel: View {
+    let title: LocalizedStringKey
+    var caption: LocalizedStringKey?
+    var fontSize: CGFloat = 20
+    var verticalPadding: CGFloat = 22
+    var color: Color = Theme.red
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 14) {
+            Text(title)
+                .scaledFont(.mincho(fontSize, .extraBold))
+                .tracking(fontSize * 0.2)
+            if let caption {
+                Text(caption)
+                    .scaledFont(.mincho(13))
+                    .tracking(1)
+            }
+        }
+        .lineLimit(1)
+        .minimumScaleFactor(0.7)
+        .foregroundStyle(Theme.lightPaper)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, verticalPadding)
+        .background { InkSurface(color: color) }
+        .padding(6)
+        .overlay { Rectangle().strokeBorder(Theme.navy, lineWidth: 1.5) }
+        .contentShape(Rectangle())
+    }
+}
+
+/// 上下を二重線で挟んだボタン（デザインの「もう一度献上する」「画像を保存」など、主ボタンの下に並べるもの）
+struct RuleButton: View {
+    let title: LocalizedStringKey
+    var fontSize: CGFloat = 15
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            RuleButtonLabel(title: title, fontSize: fontSize)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// `RuleButton` の見た目
+struct RuleButtonLabel: View {
+    let title: LocalizedStringKey
+    var fontSize: CGFloat = 15
+
+    var body: some View {
+        Text(title)
+            .scaledFont(.mincho(fontSize))
+            .tracking(fontSize * 0.14)
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+            .foregroundStyle(Theme.navy)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .overlay(alignment: .top) { DoubleRule() }
+            .overlay(alignment: .bottom) { DoubleRule() }
+            .contentShape(Rectangle())
+    }
+}
+
+/// 紺の二重の横線（1pt の線を 1pt あけて 2 本。デザインの `3px double`）
+struct DoubleRule: View {
+    var body: some View {
+        VStack(spacing: 1) {
+            Rectangle().frame(height: 1)
+            Rectangle().frame(height: 1)
+        }
+        .foregroundStyle(Theme.navy)
+        .accessibilityHidden(true)
     }
 }
 
