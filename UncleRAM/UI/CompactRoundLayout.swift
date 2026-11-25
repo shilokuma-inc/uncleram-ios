@@ -93,7 +93,7 @@ struct DonationReadout: View {
                         Text(verbatim: "MB")
                             .font(Theme.display(unitSize))
                     }
-                    DonationGauge(fill: engine.donatedFill, safetyLine: engine.safetyLineFill, height: gaugeHeight)
+                    DonationGauge(fill: engine.donatedFill, safetyLine: engine.safetyLineFill, height: gaugeHeight, client: engine.client)
                 }
             }
             HStack(spacing: 12) {

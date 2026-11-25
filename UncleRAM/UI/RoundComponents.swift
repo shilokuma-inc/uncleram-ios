@@ -160,12 +160,18 @@ struct DonationGauge: View {
     let safetyLine: Double
     var height: CGFloat = 22
     var showsSafetyLabel = true
+    /// 回収ラインが散らばる範囲を背景に濃淡で描く取引先。nil なら描かない
+    var client: Client?
 
     var body: some View {
         GeometryReader { proxy in
             let inner = max(0, proxy.size.width - 4)
             ZStack(alignment: .leading) {
                 InkSurface()
+                if let client {
+                    CollectionLineShading(client: client, width: inner)
+                        .padding(2)
+                }
                 StripedInk()
                     .frame(width: inner * min(max(fill, 0), 1))
                     .padding(2)
@@ -192,6 +198,49 @@ struct DonationGauge: View {
         .accessibilityElement()
         .accessibilityLabel(Text("献上量"))
         .accessibilityValue(Text("枠の \(Formatters.percent(fill))%"))
+    }
+}
+
+/// ゲージの背景の濃淡。取引先の回収ラインが散らばる範囲を薄い赤で描き、どこから危ないかを読まずに分からせる
+/// （docs/SPEC.md「説明なしで分かる UI」の「ゲージの濃淡」）。普段の範囲（アロケート社は 55〜80%）を濃く、
+/// 早期回収の範囲（30〜50%）をうっすら置く。そのラウンドのラインそのものは見せない
+struct CollectionLineShading: View {
+    let client: Client
+    /// ゲージの中の幅
+    let width: CGFloat
+
+    /// 普段の範囲と、早期回収の範囲の濃さ
+    static let regularOpacity = 0.2
+    static let earlyOpacity = 0.08
+
+    var body: some View {
+        ZStack(alignment: .leading) {
+            band(client.earlyLineRange, opacity: Self.earlyOpacity)
+            band(client.lineRange, opacity: Self.regularOpacity)
+        }
+        .frame(width: width, alignment: .leading)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    /// 範囲の両端は、境目がはっきりしすぎないよう、少しぼかす
+    private func band(_ range: ClosedRange<Double>, opacity: Double) -> some View {
+        let color = Theme.red.opacity(opacity)
+        return Rectangle()
+            .fill(
+                LinearGradient(
+                    stops: [
+                        .init(color: color.opacity(0), location: 0),
+                        .init(color: color, location: 0.12),
+                        .init(color: color, location: 0.88),
+                        .init(color: color.opacity(0), location: 1)
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .frame(width: width * (range.upperBound - range.lowerBound))
+            .offset(x: width * range.lowerBound)
     }
 }
 
