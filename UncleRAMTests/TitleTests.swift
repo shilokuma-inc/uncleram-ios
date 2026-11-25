@@ -43,7 +43,9 @@ struct TitleTests {
         let store = LocalStore(defaults: defaults)
         store.hasAcknowledgedSafetyNotice = true
         store.tapToDonate = true
+        store.reducesCollectEffect = true
         #expect(LocalStore(defaults: defaults).tapToDonate)
+        #expect(LocalStore(defaults: defaults).reducesCollectEffect)
 
         defaults.set(Data("{}".utf8), forKey: UserDefaultsRankingStore.personalBestsKey)
         defaults.set(Data("{}".utf8), forKey: UserDefaultsRankingStore.pendingScoresKey)
@@ -56,5 +58,6 @@ struct TitleTests {
         let reloaded = LocalStore(defaults: defaults)
         #expect(!reloaded.hasAcknowledgedSafetyNotice)
         #expect(!reloaded.tapToDonate)
+        #expect(!reloaded.reducesCollectEffect)
     }
 }
