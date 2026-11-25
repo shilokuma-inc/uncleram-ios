@@ -8,15 +8,15 @@
         {
           "formatterSuffix" : "MB",
           "formatterSuffixSingular" : "MB",
-          "localID" : "jp.shilokuma.UncleRAM.lb.daily.mb_ios_l-en-US",
           "locale" : "en-US",
-          "name" : "Daily: Donated, iPhone/iPad 16GB+"
+          "localID" : "jp.shilokuma.UncleRAM.lb.daily.mb_ios_l-en-US",
+          "name" : "Daily: Donated, iPhone\/iPad 16GB+"
         },
         {
           "formatterSuffix" : "MB",
           "formatterSuffixSingular" : "MB",
-          "localID" : "jp.shilokuma.UncleRAM.lb.daily.mb_ios_l-ja",
           "locale" : "ja",
+          "localID" : "jp.shilokuma.UncleRAM.lb.daily.mb_ios_l-ja",
           "name" : "デイリー 献上量 iPhone・iPad 16GB 以上"
         }
       ],
@@ -24,15 +24,15 @@
         {
           "formatterSuffix" : "MB",
           "formatterSuffixSingular" : "MB",
-          "localID" : "jp.shilokuma.UncleRAM.lb.daily.mb_ios_m-en-US",
           "locale" : "en-US",
-          "name" : "Daily: Donated, iPhone/iPad 12GB"
+          "localID" : "jp.shilokuma.UncleRAM.lb.daily.mb_ios_m-en-US",
+          "name" : "Daily: Donated, iPhone\/iPad 12GB"
         },
         {
           "formatterSuffix" : "MB",
           "formatterSuffixSingular" : "MB",
-          "localID" : "jp.shilokuma.UncleRAM.lb.daily.mb_ios_m-ja",
           "locale" : "ja",
+          "localID" : "jp.shilokuma.UncleRAM.lb.daily.mb_ios_m-ja",
           "name" : "デイリー 献上量 iPhone・iPad 12GB"
         }
       ],
@@ -40,15 +40,15 @@
         {
           "formatterSuffix" : "MB",
           "formatterSuffixSingular" : "MB",
-          "localID" : "jp.shilokuma.UncleRAM.lb.daily.mb_ios_s-en-US",
           "locale" : "en-US",
-          "name" : "Daily: Donated, iPhone/iPad ≤8GB"
+          "localID" : "jp.shilokuma.UncleRAM.lb.daily.mb_ios_s-en-US",
+          "name" : "Daily: Donated, iPhone\/iPad ≤8GB"
         },
         {
           "formatterSuffix" : "MB",
           "formatterSuffixSingular" : "MB",
-          "localID" : "jp.shilokuma.UncleRAM.lb.daily.mb_ios_s-ja",
           "locale" : "ja",
+          "localID" : "jp.shilokuma.UncleRAM.lb.daily.mb_ios_s-ja",
           "name" : "デイリー 献上量 iPhone・iPad 8GB 以下"
         }
       ],
@@ -56,15 +56,15 @@
         {
           "formatterSuffix" : "MB",
           "formatterSuffixSingular" : "MB",
-          "localID" : "jp.shilokuma.UncleRAM.lb.daily.mb_mac_l-en-US",
           "locale" : "en-US",
+          "localID" : "jp.shilokuma.UncleRAM.lb.daily.mb_mac_l-en-US",
           "name" : "Daily: Donated, Mac 48GB+"
         },
         {
           "formatterSuffix" : "MB",
           "formatterSuffixSingular" : "MB",
-          "localID" : "jp.shilokuma.UncleRAM.lb.daily.mb_mac_l-ja",
           "locale" : "ja",
+          "localID" : "jp.shilokuma.UncleRAM.lb.daily.mb_mac_l-ja",
           "name" : "デイリー 献上量 Mac 48GB 以上"
         }
       ],
@@ -72,15 +72,15 @@
         {
           "formatterSuffix" : "MB",
           "formatterSuffixSingular" : "MB",
-          "localID" : "jp.shilokuma.UncleRAM.lb.daily.mb_mac_m-en-US",
           "locale" : "en-US",
+          "localID" : "jp.shilokuma.UncleRAM.lb.daily.mb_mac_m-en-US",
           "name" : "Daily: Donated, Mac 24–32GB"
         },
         {
           "formatterSuffix" : "MB",
           "formatterSuffixSingular" : "MB",
-          "localID" : "jp.shilokuma.UncleRAM.lb.daily.mb_mac_m-ja",
           "locale" : "ja",
+          "localID" : "jp.shilokuma.UncleRAM.lb.daily.mb_mac_m-ja",
           "name" : "デイリー 献上量 Mac 24〜32GB"
         }
       ],
@@ -88,15 +88,15 @@
         {
           "formatterSuffix" : "MB",
           "formatterSuffixSingular" : "MB",
-          "localID" : "jp.shilokuma.UncleRAM.lb.daily.mb_mac_s-en-US",
           "locale" : "en-US",
+          "localID" : "jp.shilokuma.UncleRAM.lb.daily.mb_mac_s-en-US",
           "name" : "Daily: Donated, Mac ≤16GB"
         },
         {
           "formatterSuffix" : "MB",
           "formatterSuffixSingular" : "MB",
-          "localID" : "jp.shilokuma.UncleRAM.lb.daily.mb_mac_s-ja",
           "locale" : "ja",
+          "localID" : "jp.shilokuma.UncleRAM.lb.daily.mb_mac_s-ja",
           "name" : "デイリー 献上量 Mac 16GB 以下"
         }
       ],
@@ -104,15 +104,15 @@
         {
           "formatterSuffix" : "pt",
           "formatterSuffixSingular" : "pt",
-          "localID" : "jp.shilokuma.UncleRAM.lb.daily.skill-en-US",
           "locale" : "en-US",
+          "localID" : "jp.shilokuma.UncleRAM.lb.daily.skill-en-US",
           "name" : "Daily: Skill"
         },
         {
           "formatterSuffix" : "pt",
           "formatterSuffixSingular" : "pt",
-          "localID" : "jp.shilokuma.UncleRAM.lb.daily.skill-ja",
           "locale" : "ja",
+          "localID" : "jp.shilokuma.UncleRAM.lb.daily.skill-ja",
           "name" : "デイリー 腕前スコア"
         }
       ],
@@ -120,15 +120,15 @@
         {
           "formatterSuffix" : "MB",
           "formatterSuffixSingular" : "MB",
-          "localID" : "jp.shilokuma.UncleRAM.lb.express.mb_ios_l-en-US",
           "locale" : "en-US",
-          "name" : "Express: Donated, iPhone/iPad 16GB+"
+          "localID" : "jp.shilokuma.UncleRAM.lb.express.mb_ios_l-en-US",
+          "name" : "Express: Donated, iPhone\/iPad 16GB+"
         },
         {
           "formatterSuffix" : "MB",
           "formatterSuffixSingular" : "MB",
-          "localID" : "jp.shilokuma.UncleRAM.lb.express.mb_ios_l-ja",
           "locale" : "ja",
+          "localID" : "jp.shilokuma.UncleRAM.lb.express.mb_ios_l-ja",
           "name" : "速達便 献上量 iPhone・iPad 16GB 以上"
         }
       ],
@@ -136,15 +136,15 @@
         {
           "formatterSuffix" : "MB",
           "formatterSuffixSingular" : "MB",
-          "localID" : "jp.shilokuma.UncleRAM.lb.express.mb_ios_m-en-US",
           "locale" : "en-US",
-          "name" : "Express: Donated, iPhone/iPad 12GB"
+          "localID" : "jp.shilokuma.UncleRAM.lb.express.mb_ios_m-en-US",
+          "name" : "Express: Donated, iPhone\/iPad 12GB"
         },
         {
           "formatterSuffix" : "MB",
           "formatterSuffixSingular" : "MB",
-          "localID" : "jp.shilokuma.UncleRAM.lb.express.mb_ios_m-ja",
           "locale" : "ja",
+          "localID" : "jp.shilokuma.UncleRAM.lb.express.mb_ios_m-ja",
           "name" : "速達便 献上量 iPhone・iPad 12GB"
         }
       ],
@@ -152,15 +152,15 @@
         {
           "formatterSuffix" : "MB",
           "formatterSuffixSingular" : "MB",
-          "localID" : "jp.shilokuma.UncleRAM.lb.express.mb_ios_s-en-US",
           "locale" : "en-US",
-          "name" : "Express: Donated, iPhone/iPad ≤8GB"
+          "localID" : "jp.shilokuma.UncleRAM.lb.express.mb_ios_s-en-US",
+          "name" : "Express: Donated, iPhone\/iPad ≤8GB"
         },
         {
           "formatterSuffix" : "MB",
           "formatterSuffixSingular" : "MB",
-          "localID" : "jp.shilokuma.UncleRAM.lb.express.mb_ios_s-ja",
           "locale" : "ja",
+          "localID" : "jp.shilokuma.UncleRAM.lb.express.mb_ios_s-ja",
           "name" : "速達便 献上量 iPhone・iPad 8GB 以下"
         }
       ],
@@ -168,15 +168,15 @@
         {
           "formatterSuffix" : "MB",
           "formatterSuffixSingular" : "MB",
-          "localID" : "jp.shilokuma.UncleRAM.lb.express.mb_mac_l-en-US",
           "locale" : "en-US",
+          "localID" : "jp.shilokuma.UncleRAM.lb.express.mb_mac_l-en-US",
           "name" : "Express: Donated, Mac 48GB+"
         },
         {
           "formatterSuffix" : "MB",
           "formatterSuffixSingular" : "MB",
-          "localID" : "jp.shilokuma.UncleRAM.lb.express.mb_mac_l-ja",
           "locale" : "ja",
+          "localID" : "jp.shilokuma.UncleRAM.lb.express.mb_mac_l-ja",
           "name" : "速達便 献上量 Mac 48GB 以上"
         }
       ],
@@ -184,15 +184,15 @@
         {
           "formatterSuffix" : "MB",
           "formatterSuffixSingular" : "MB",
-          "localID" : "jp.shilokuma.UncleRAM.lb.express.mb_mac_m-en-US",
           "locale" : "en-US",
+          "localID" : "jp.shilokuma.UncleRAM.lb.express.mb_mac_m-en-US",
           "name" : "Express: Donated, Mac 24–32GB"
         },
         {
           "formatterSuffix" : "MB",
           "formatterSuffixSingular" : "MB",
-          "localID" : "jp.shilokuma.UncleRAM.lb.express.mb_mac_m-ja",
           "locale" : "ja",
+          "localID" : "jp.shilokuma.UncleRAM.lb.express.mb_mac_m-ja",
           "name" : "速達便 献上量 Mac 24〜32GB"
         }
       ],
@@ -200,15 +200,15 @@
         {
           "formatterSuffix" : "MB",
           "formatterSuffixSingular" : "MB",
-          "localID" : "jp.shilokuma.UncleRAM.lb.express.mb_mac_s-en-US",
           "locale" : "en-US",
+          "localID" : "jp.shilokuma.UncleRAM.lb.express.mb_mac_s-en-US",
           "name" : "Express: Donated, Mac ≤16GB"
         },
         {
           "formatterSuffix" : "MB",
           "formatterSuffixSingular" : "MB",
-          "localID" : "jp.shilokuma.UncleRAM.lb.express.mb_mac_s-ja",
           "locale" : "ja",
+          "localID" : "jp.shilokuma.UncleRAM.lb.express.mb_mac_s-ja",
           "name" : "速達便 献上量 Mac 16GB 以下"
         }
       ],
@@ -216,22 +216,24 @@
         {
           "formatterSuffix" : "pt",
           "formatterSuffixSingular" : "pt",
-          "localID" : "jp.shilokuma.UncleRAM.lb.express.skill-en-US",
           "locale" : "en-US",
+          "localID" : "jp.shilokuma.UncleRAM.lb.express.skill-en-US",
           "name" : "Express: Skill"
         },
         {
           "formatterSuffix" : "pt",
           "formatterSuffixSingular" : "pt",
-          "localID" : "jp.shilokuma.UncleRAM.lb.express.skill-ja",
           "locale" : "ja",
+          "localID" : "jp.shilokuma.UncleRAM.lb.express.skill-ja",
           "name" : "速達便 腕前スコア"
         }
       ]
     },
     "leaderboards" : [
       {
-        "activityProperties" : {},
+        "activityProperties" : {
+
+        },
         "archived" : false,
         "defaultFormatter" : "INTEGER",
         "referenceName" : "Express Skill",
@@ -243,10 +245,12 @@
         "visibility" : "SHOW_FOR_ALL"
       },
       {
-        "activityProperties" : {},
+        "activityProperties" : {
+
+        },
         "archived" : false,
         "defaultFormatter" : "INTEGER",
-        "referenceName" : "Express Donated iPhone/iPad 8GB or less",
+        "referenceName" : "Express Donated iPhone\/iPad 8GB or less",
         "scoreRangeEnd" : null,
         "scoreRangeStart" : null,
         "scoreSortType" : "DESC",
@@ -255,10 +259,12 @@
         "visibility" : "SHOW_FOR_ALL"
       },
       {
-        "activityProperties" : {},
+        "activityProperties" : {
+
+        },
         "archived" : false,
         "defaultFormatter" : "INTEGER",
-        "referenceName" : "Express Donated iPhone/iPad 12GB",
+        "referenceName" : "Express Donated iPhone\/iPad 12GB",
         "scoreRangeEnd" : null,
         "scoreRangeStart" : null,
         "scoreSortType" : "DESC",
@@ -267,10 +273,12 @@
         "visibility" : "SHOW_FOR_ALL"
       },
       {
-        "activityProperties" : {},
+        "activityProperties" : {
+
+        },
         "archived" : false,
         "defaultFormatter" : "INTEGER",
-        "referenceName" : "Express Donated iPhone/iPad 16GB or more",
+        "referenceName" : "Express Donated iPhone\/iPad 16GB or more",
         "scoreRangeEnd" : null,
         "scoreRangeStart" : null,
         "scoreSortType" : "DESC",
@@ -279,7 +287,9 @@
         "visibility" : "SHOW_FOR_ALL"
       },
       {
-        "activityProperties" : {},
+        "activityProperties" : {
+
+        },
         "archived" : false,
         "defaultFormatter" : "INTEGER",
         "referenceName" : "Express Donated Mac 16GB or less",
@@ -291,7 +301,9 @@
         "visibility" : "SHOW_FOR_ALL"
       },
       {
-        "activityProperties" : {},
+        "activityProperties" : {
+
+        },
         "archived" : false,
         "defaultFormatter" : "INTEGER",
         "referenceName" : "Express Donated Mac 24-32GB",
@@ -303,7 +315,9 @@
         "visibility" : "SHOW_FOR_ALL"
       },
       {
-        "activityProperties" : {},
+        "activityProperties" : {
+
+        },
         "archived" : false,
         "defaultFormatter" : "INTEGER",
         "referenceName" : "Express Donated Mac 48GB or more",
@@ -315,7 +329,9 @@
         "visibility" : "SHOW_FOR_ALL"
       },
       {
-        "activityProperties" : {},
+        "activityProperties" : {
+
+        },
         "archived" : false,
         "defaultFormatter" : "INTEGER",
         "recurrenceDuration" : "P1D",
@@ -330,13 +346,15 @@
         "visibility" : "SHOW_FOR_ALL"
       },
       {
-        "activityProperties" : {},
+        "activityProperties" : {
+
+        },
         "archived" : false,
         "defaultFormatter" : "INTEGER",
         "recurrenceDuration" : "P1D",
         "recurrenceRule" : "FREQ=DAILY;INTERVAL=1",
         "recurrenceStartDate" : "2026-12-01T00:00:00Z",
-        "referenceName" : "Daily Donated iPhone/iPad 8GB or less",
+        "referenceName" : "Daily Donated iPhone\/iPad 8GB or less",
         "scoreRangeEnd" : null,
         "scoreRangeStart" : null,
         "scoreSortType" : "DESC",
@@ -345,13 +363,15 @@
         "visibility" : "SHOW_FOR_ALL"
       },
       {
-        "activityProperties" : {},
+        "activityProperties" : {
+
+        },
         "archived" : false,
         "defaultFormatter" : "INTEGER",
         "recurrenceDuration" : "P1D",
         "recurrenceRule" : "FREQ=DAILY;INTERVAL=1",
         "recurrenceStartDate" : "2026-12-01T00:00:00Z",
-        "referenceName" : "Daily Donated iPhone/iPad 12GB",
+        "referenceName" : "Daily Donated iPhone\/iPad 12GB",
         "scoreRangeEnd" : null,
         "scoreRangeStart" : null,
         "scoreSortType" : "DESC",
@@ -360,13 +380,15 @@
         "visibility" : "SHOW_FOR_ALL"
       },
       {
-        "activityProperties" : {},
+        "activityProperties" : {
+
+        },
         "archived" : false,
         "defaultFormatter" : "INTEGER",
         "recurrenceDuration" : "P1D",
         "recurrenceRule" : "FREQ=DAILY;INTERVAL=1",
         "recurrenceStartDate" : "2026-12-01T00:00:00Z",
-        "referenceName" : "Daily Donated iPhone/iPad 16GB or more",
+        "referenceName" : "Daily Donated iPhone\/iPad 16GB or more",
         "scoreRangeEnd" : null,
         "scoreRangeStart" : null,
         "scoreSortType" : "DESC",
@@ -375,7 +397,9 @@
         "visibility" : "SHOW_FOR_ALL"
       },
       {
-        "activityProperties" : {},
+        "activityProperties" : {
+
+        },
         "archived" : false,
         "defaultFormatter" : "INTEGER",
         "recurrenceDuration" : "P1D",
@@ -390,7 +414,9 @@
         "visibility" : "SHOW_FOR_ALL"
       },
       {
-        "activityProperties" : {},
+        "activityProperties" : {
+
+        },
         "archived" : false,
         "defaultFormatter" : "INTEGER",
         "recurrenceDuration" : "P1D",
@@ -405,7 +431,9 @@
         "visibility" : "SHOW_FOR_ALL"
       },
       {
-        "activityProperties" : {},
+        "activityProperties" : {
+
+        },
         "archived" : false,
         "defaultFormatter" : "INTEGER",
         "recurrenceDuration" : "P1D",
