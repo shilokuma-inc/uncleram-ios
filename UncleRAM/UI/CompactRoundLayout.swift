@@ -35,13 +35,10 @@ struct CompactRoundLayout: View {
                         }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    Airship(
-                        stage: engine.hintStage,
-                        baseSize: isShort ? Self.shortAirshipSize : Airship.defaultSize,
-                        emphasized: engine.plan?.isPractice == true
-                    )
-                    .padding(.top, 2)
-                    .tutorialBubble([.approach], alignment: .bottomTrailing, offset: CGSize(width: 0, height: 30))
+                    // 縦の画面では、練習ラウンドでも飛行船は大きくしない（尾がボタンにかかるため）。兆しはノイズの濃さと吹き出しで大きく出す
+                    Airship(stage: engine.hintStage, baseSize: isShort ? Self.shortAirshipSize : Airship.defaultSize)
+                        .padding(.top, 2)
+                        .tutorialBubble([.approach], alignment: .bottomTrailing, offset: CGSize(width: 0, height: 30))
                 }
             }
             PriceFooter(engine: engine, compact: isShort)
