@@ -10,7 +10,7 @@
 
 - `INFOPLIST_KEY_UIApplicationSupportsMultipleScenes` は Info.plist の生成に使われない。`INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES` のままだと、Info.plist のファイルに `UIApplicationSupportsMultipleScenes = false` を書いても `true` で上書きされる。生成を止めて、`UIApplicationSceneManifest` をファイルに書く（2026-11-12）
 - 引き継ぎ資料の `tools/` は、macOS のファイルシステムが大文字と小文字を区別しないため、テンプレートの `Tools/` と同じ場所になる。`Tools/sim.py` と `Tools/artwork/` に置いた（2026-11-12）
-- プロジェクトは Xcode 26.6 に合わせている。Xcode 27.1 で開いて GameKit バンドルの Push を試したあと、`project.pbxproj` と `Info.plist` が書き換わっていた。並び順が変わり、`UncleRAM.entitlements` が同期フォルダの除外から外れ、`ITSAppUsesNonExemptEncryption` が Info.plist から `INFOPLIST_KEY_` の設定に移り、`Configs/Project.xcconfig` にある `DEVELOPMENT_TEAM` が重ねて書かれる。これはコミットしない（2026-11-26）
+- Xcode の画面でプロジェクトを開くと、26.6 でも `project.pbxproj` を Xcode の並び順に書き直し、同期フォルダの除外から `UncleRAM.entitlements` を外す。権限のファイルは除外しなくてもアプリに入らない（ビルドして確かめた）ので、2026-11-26 にリポジトリを Xcode の形にそろえた。手で pbxproj を直したら、Xcode で開いて保存された形でコミットする。Xcode 27.1 で開いて GameKit バンドルの Push を試したあとは、さらに `ITSAppUsesNonExemptEncryption` が Info.plist から `INFOPLIST_KEY_` の設定に移り、`Configs/Project.xcconfig` にある `DEVELOPMENT_TEAM` が pbxproj に重ねて書かれていた。こちらはコミットしない（2026-11-26）
 
 ## テスト
 
