@@ -13,6 +13,8 @@ final class UserDefaultsRankingStore: RankingStore {
     /// 中身の形を変えるときは、キーの版を上げる（読めない古い値は空として扱う）
     static let pendingScoresKey = "leaderboards.pendingScores.v1"
     static let personalBestsKey = "leaderboards.personalBests.v1"
+    /// データの初期化で消すキー（LocalStore.resetAll）
+    static let allKeys = [pendingScoresKey, personalBestsKey]
 
     private let defaults: UserDefaults
 
