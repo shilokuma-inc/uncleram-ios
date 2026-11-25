@@ -396,9 +396,10 @@ extension RoundEngine {
             hintStage = stage.0
             demoDonatedBytes = bytes(stage.1)
             phase = .donating
-        case .delivered, .collect, .collected:
-            // 回収演出（collect）と回収の結果（collected）は、同じ回収のラウンドを出す。どちらを見せるかは RoundScreen が決める
-            let delivered = scene == .delivered
+        case .delivered, .dailyDelivered, .collect, .collected:
+            // 回収演出（collect）と回収の結果（collected）は、同じ回収のラウンドを出す。どちらを見せるかは RoundScreen が決める。
+            // dailyDelivered は delivered と同じラウンドを、デイリーの結果として出す（AppRoot がデイリーの画面で開く）
+            let delivered = scene == .delivered || scene == .dailyDelivered
             let collectedPlan = RoundPlan(isEarlyCollection: false, collectionLine: 0.58, hintThresholds: [0.43, 0.50, 0.56], bluffAt: nil)
             self.plan = delivered ? plan : collectedPlan
             lastReleaseDuration = 0.042
