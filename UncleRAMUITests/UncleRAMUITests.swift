@@ -105,4 +105,20 @@ final class UncleRAMUITests: XCTestCase {
         app.buttons["閉じる"].tap()
         XCTAssertTrue(app.buttons["献上をはじめる"].waitForExistence(timeout: 5))
     }
+
+    /// 回収されたら、結果の前に回収演出が出る。演出の終わりに出る「結果を見る」で、結果（ラインを明かす画面）に進む。
+    /// 遊んで回収させると時間がかかり、ラインも乱数で決まるので、撮影モードの回収演出の場面で確かめる
+    @MainActor
+    func testCollectEffectLeadsToResult() throws {
+        let app = XCUIApplication()
+        app.launchArguments += ["-screenshot-demo", "-screenshot-scene", "collect"]
+        app.launch()
+
+        let showResult = app.buttons["結果を見る"]
+        XCTAssertTrue(showResult.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["端末のメモリはすでに解放済みです"].exists)
+        showResult.tap()
+        XCTAssertTrue(app.buttons["もう一度献上する"].waitForExistence(timeout: 5))
+        XCTAssertFalse(showResult.exists)
+    }
 }
