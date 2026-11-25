@@ -16,6 +16,8 @@
 
 - リポジトリが `~/Desktop` の下にあると、Mac の Unit テストからソースのファイル（`#filePath` から辿ったもの）を読もうとしたところで、テストが止まって進まなくなる。テストを動かすアプリ（test host）が、デスクトップのファイルへのアクセスの許可を待つため（アドホック署名はビルドのたびに別のアプリとみなされる）。CI はデスクトップの外に checkout するので止まらない。ソースを読む確かめは、テストではなく CI のスクリプト（例: `Tools/fonts/subset.py --check`）で行う（2026-11-26）
 
+- CI の Build は、作業ブランチへの push では Unit テストだけを流し、PR では iOS Simulator の UI テストまで流す。画面の流れを変えたら、手元で `-only-testing:UncleRAMUITests/UncleRAMUITests` を流しておく。UI テストは起動引数 `-hasAcknowledgedSafetyNotice YES`（UserDefaults の引数のドメイン）で、初回の案内を飛ばしている（2026-11-26）
+
 ## Game Center
 
 - Xcode 26 の GameKit バンドル（`.gamekit`）は、中の `gameCenterResources.json`（`meta.version` は `2024-11-15`）だけで読める。書き方は Apple の公式サンプル（apple/unityplugins の `Apple.GameKit.Sample/GameCenterResources.gamekit`）が参考になる。繰り返し型は `recurrenceStartDate`（UTC の ISO 8601）・`recurrenceDuration`（例 `P1D`）・`recurrenceRule`（例 `FREQ=DAILY;INTERVAL=1`）、スコアの範囲は文字列（`"0"`・`"300"`）（2026-11-24）
