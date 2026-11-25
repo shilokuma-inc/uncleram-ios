@@ -119,7 +119,7 @@ struct WideRoundLayout: View {
                         .padding(.vertical, 3)
                         .overlay { Rectangle().strokeBorder(Theme.navy, lineWidth: 1.5) }
                     Text("クリックの長押しでも献上できます")
-                        .font(Theme.mincho(13, bold: false))
+                        .font(Theme.mincho(13, .medium))
                         .foregroundStyle(Theme.subText)
                 }
                 #endif
@@ -152,7 +152,7 @@ struct WideRoundLayout: View {
                 .font(Theme.typewriter(12))
             #endif
         }
-        .font(Theme.mincho(12, bold: false))
+        .font(Theme.mincho(12, .medium))
         .foregroundStyle(Theme.subText)
         .padding(.top, 8)
         .overlay(alignment: .top) { DashedRule() }
@@ -210,7 +210,7 @@ struct DonationStatement: View {
                             .foregroundStyle(Theme.red)
                     }
                 }
-                .font(Theme.mincho(11, bold: false))
+                .font(Theme.mincho(11, .medium))
                 .foregroundStyle(Theme.subText)
             }
         }
@@ -224,11 +224,11 @@ struct DonationStatement: View {
             Text(title)
             Spacer()
             Text(verbatim: value)
-                .font(typewriter ? Theme.typewriter(14) : Theme.mincho(14, bold: false))
+                .font(typewriter ? Theme.typewriter(14) : Theme.mincho(14, .medium))
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
         }
-        .font(Theme.mincho(14, bold: false))
+        .font(Theme.mincho(14, .medium))
     }
 }
 

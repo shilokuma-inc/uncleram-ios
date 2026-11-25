@@ -55,7 +55,7 @@ struct HintIndicator: View {
                 .overlay { Rectangle().strokeBorder(Theme.navy, lineWidth: 1) }
             }
         }
-        .font(Theme.mincho(fontSize, bold: false))
+        .font(Theme.mincho(fontSize, .medium))
         .foregroundStyle(Theme.subText)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(label))
@@ -235,7 +235,7 @@ struct HoldButtonFace: View {
                     .font(Theme.display(diameter * 0.055))
                     .tracking(diameter * 0.011)
                 Text(holding ? "献上中" : title)
-                    .font(Theme.mincho(diameter * 0.12))
+                    .font(Theme.mincho(diameter * 0.12, .extraBold))
                     .tracking(diameter * 0.01)
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
@@ -330,7 +330,7 @@ struct CircleStamp: View {
             Circle().strokeBorder(color, lineWidth: 2.5)
             Circle().strokeBorder(color, lineWidth: 1).padding(6)
             Text(text)
-                .font(Theme.mincho(diameter * 0.22))
+                .font(Theme.mincho(diameter * 0.22, .extraBold))
                 .foregroundStyle(color)
                 .multilineTextAlignment(.center)
                 .minimumScaleFactor(0.5)
@@ -350,7 +350,7 @@ struct BoxStamp: View {
     var body: some View {
         VStack(spacing: 2) {
             Text(caption)
-                .font(Theme.mincho(12))
+                .font(Theme.mincho(12, .extraBold))
                 .tracking(3)
             Text(verbatim: value)
                 .font(Theme.display(28))
