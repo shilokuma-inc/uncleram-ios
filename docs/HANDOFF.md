@@ -220,6 +220,13 @@
 | 工場の網点 | Detroit Publishing Co.「Homestead Steel Works」1900 年ごろ（米国議会図書館） | パブリックドメイン |
 | 指差す手・シルクハット | J. M. Flagg「I Want You for U.S. Army」1917（米国議会図書館） | パブリックドメイン。顔と「U.S. ARMY」の文字は使わない |
 | 回収飛行船 | Bain News Service「German dirigible」1910（米国議会図書館） | パブリックドメイン。船体の文字はぼかし済み |
+| 効果音: 回収飛行船のプロペラ | ilm0player「Airship propeller engine」/ Freesound（freesound.org/people/ilm0player/sounds/578181/、2026-11-26 に取得） | CC0 1.0 |
+| 効果音: 納品の判子 | kermite607「Stamp」/ Freesound（freesound.org/people/kermite607/sounds/362624/、2026-11-26 に取得） | CC0 1.0 |
+| 効果音: 納品のベル | ramsamba「Typewriter Bell.wav」/ Freesound（freesound.org/people/ramsamba/sounds/318687/、2026-11-26 に取得） | CC0 1.0 |
+| 効果音: 回収の汽笛 | Bidone「Steam Whistle.mp3」/ Freesound（freesound.org/people/Bidone/sounds/71778/、2026-11-26 に取得） | CC0 1.0 |
+| 効果音: 明細書の印字 | escritor1「Typewriter Typing.wav」/ Freesound（freesound.org/people/escritor1/sounds/455044/、2026-11-26 に取得） | CC0 1.0 |
+
+効果音は、上の音を `Tools/sounds/make_sounds.py` が取ってきて（ファイルのハッシュを固定）、`Tools/sounds/edit.swift` で切り出し・フェード・音量の調整をしてから AAC にしたもの（`UncleRAM/Sounds/`）。使うのは CC0 かパブリックドメインと明記された音だけにする（帰属表示が要るもの・非商用のみのもの・条件があいまいな「ロイヤリティフリー」は使わない）。音を替えたら、この表と設定の「ライセンス」もそろえる。
 
 ## このフォルダの中身
 
