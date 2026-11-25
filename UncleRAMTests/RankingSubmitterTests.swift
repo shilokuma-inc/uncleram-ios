@@ -67,13 +67,14 @@ struct RankingSubmitterTests {
         let submitter = RankingSubmitter(service: service, store: store) { clock.now }
 
         let record = Self.record(.daily(LeaderboardRulesTests.firstDay))
+        service.occurrenceEnd = record.expiresAt
         await submitter.submit(record)
         #expect(store.pendingScores.scores.count == 2)
 
         service.failure = nil
         clock.now = try Self.date("2026-12-01T23:59:59Z")
         await submitter.resendPending()
-        #expect(service.submitted == record.leaderboardScores)
+        #expect(service.submittedToOccurrence == record.leaderboardScores)
 
         service.failure = FakeError()
         await submitter.submit(record)
@@ -82,7 +83,7 @@ struct RankingSubmitterTests {
         service.failure = nil
         clock.now = try Self.date("2026-12-02T00:00:00Z")
         await submitter.resendPending()
-        #expect(service.submitted.count == 2)
+        #expect(service.submittedToOccurrence.count == 2)
         #expect(store.pendingScores.isEmpty)
     }
 
@@ -240,8 +241,14 @@ private struct FakeError: Error {}
 
 private final class FakeLeaderboardService: LeaderboardService {
     var isAuthenticated: Bool
+    /// 送る・回を読み込むときに投げるエラー
     var failure: (any Error)?
+    /// デイリーの今の回の終わり。nil なら回が無い
+    var occurrenceEnd: Date?
+    /// 受け取った時点の回に送ったもの（速達便）
     private(set) var submitted: [LeaderboardScore] = []
+    /// 読み込んだ回に送ったもの（デイリー）
+    var submittedToOccurrence: [LeaderboardScore] = []
 
     init(isAuthenticated: Bool = true) {
         self.isAuthenticated = isAuthenticated
@@ -252,6 +259,30 @@ private final class FakeLeaderboardService: LeaderboardService {
             throw failure
         }
         submitted.append(score)
+    }
+
+    func loadCurrentOccurrence(of _: String) async throws -> (any LeaderboardOccurrence)? {
+        if let failure {
+            throw failure
+        }
+        return occurrenceEnd.map { FakeOccurrence(endDate: $0, service: self) }
+    }
+}
+
+private final class FakeOccurrence: LeaderboardOccurrence {
+    let endDate: Date?
+    private let service: FakeLeaderboardService
+
+    init(endDate: Date, service: FakeLeaderboardService) {
+        self.endDate = endDate
+        self.service = service
+    }
+
+    func submit(_ score: LeaderboardScore) async throws {
+        if let failure = service.failure {
+            throw failure
+        }
+        service.submittedToOccurrence.append(score)
     }
 }
 

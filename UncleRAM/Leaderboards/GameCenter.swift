@@ -17,7 +17,17 @@ typealias GameCenterViewController = UIViewController
 protocol LeaderboardService: AnyObject {
     /// Game Center にサインインしているか
     var isAuthenticated: Bool { get }
-    /// 1 本のランキングに送る
+    /// 1 本のランキングの、Game Center が受け取った時点の回に送る（速達便。繰り返し型ではないので回は 1 つだけ）
+    func submit(_ score: LeaderboardScore) async throws
+    /// 繰り返し型のランキング（デイリー）の、今の回を読み込む。回が無いときは nil
+    func loadCurrentOccurrence(of leaderboardID: String) async throws -> (any LeaderboardOccurrence)?
+}
+
+/// 繰り返し型のランキングの 1 回分
+protocol LeaderboardOccurrence: AnyObject {
+    /// 回の終わり（startDate + duration）。分からないときは nil
+    var endDate: Date? { get }
+    /// この回にだけ送る。回が終わっていたら失敗し、次の回には入らない
     func submit(_ score: LeaderboardScore) async throws
 }
 
@@ -37,6 +47,32 @@ final class GameKitLeaderboardService: LeaderboardService {
             player: GKLocalPlayer.local,
             leaderboardIDs: [score.leaderboardID]
         )
+    }
+
+    func loadCurrentOccurrence(of leaderboardID: String) async throws -> (any LeaderboardOccurrence)? {
+        let leaderboards = try await GKLeaderboard.loadLeaderboards(IDs: [leaderboardID])
+        return leaderboards.first.map { GameKitLeaderboardOccurrence(leaderboard: $0) }
+    }
+}
+
+/// GameKit の繰り返し型ランキングの 1 回分。
+///
+/// クラスメソッドの `GKLeaderboard.submitScore(_:context:player:leaderboardIDs:)` は、Game Center が受け取った時点の回に入る。
+/// インスタンスメソッドの `submitScore(_:context:player:)` は、読み込んだ回がまだ開いているときだけ成功する
+/// （WWDC21「Bring Recurring Leaderboards to your game」、ドキュメント「Creating recurring leaderboards」）
+final class GameKitLeaderboardOccurrence: LeaderboardOccurrence {
+    private let leaderboard: GKLeaderboard
+
+    init(leaderboard: GKLeaderboard) {
+        self.leaderboard = leaderboard
+    }
+
+    var endDate: Date? {
+        leaderboard.startDate?.addingTimeInterval(leaderboard.duration)
+    }
+
+    func submit(_ score: LeaderboardScore) async throws {
+        try await leaderboard.submitScore(score.value, context: score.context, player: GKLocalPlayer.local)
     }
 }
 

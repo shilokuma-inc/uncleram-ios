@@ -27,6 +27,11 @@ nonisolated struct PendingScoreQueue: Sendable, Equatable, Codable {
         scores.removeAll { Self.isSameRound($0, score) && $0.value <= score.value }
     }
 
+    /// 送る回がもう無いランキングの回（挑戦した日の回が閉じたデイリー）のスコアを、すべて捨てる
+    mutating func discardRound(of score: LeaderboardScore) {
+        scores.removeAll { Self.isSameRound($0, score) }
+    }
+
     /// 期限を過ぎたデイリーを捨てる
     mutating func removeExpired(at now: Date) {
         scores.removeAll { $0.isExpired(at: now) }

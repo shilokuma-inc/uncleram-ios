@@ -15,6 +15,15 @@ nonisolated struct LeaderboardScore: Sendable, Equatable, Codable {
         }
         return now >= expiresAt
     }
+
+    /// デイリーで、繰り返し型ランキングの回の終わりが、このスコアの期限（挑戦した日の 24 時）と同じか。
+    /// 違えば、読み込んでいる間に日付が変わったなどで、挑戦した日の回ではない。1 秒未満のずれは、時刻の端数とみなして同じにする
+    func belongs(toOccurrenceEndingAt endDate: Date?) -> Bool {
+        guard let expiresAt, let endDate else {
+            return false
+        }
+        return abs(endDate.timeIntervalSince(expiresAt)) < 1
+    }
 }
 
 /// ランキングに入るラウンド。デイリーは、挑戦した日（ラウンドの条件を作った日）を持つ

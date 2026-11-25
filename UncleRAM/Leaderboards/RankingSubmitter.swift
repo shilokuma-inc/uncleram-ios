@@ -63,18 +63,45 @@ final class RankingSubmitter {
         store.pendingScores.removeExpired(at: now())
     }
 
+    private enum Delivery {
+        case sent
+        /// 挑戦した日の回が、もう開いていない
+        case roundClosed
+    }
+
     private func send(_ score: LeaderboardScore, enqueueOnFailure: Bool) async {
         guard !score.isExpired(at: now()) else {
             return
         }
         do {
-            try await service.submit(score)
-            store.pendingScores.markSent(score)
+            switch try await deliver(score) {
+            case .sent:
+                store.pendingScores.markSent(score)
+            case .roundClosed:
+                logger.notice("Discarded a daily score for a closed round of \(score.leaderboardID, privacy: .public)")
+                store.pendingScores.discardRound(of: score)
+            }
         } catch {
             logger.notice("Could not submit to \(score.leaderboardID, privacy: .public): \(error.localizedDescription, privacy: .public)")
             if enqueueOnFailure {
                 store.pendingScores.enqueue(score)
             }
         }
+    }
+
+    /// 速達便は、受け取った時点の回に送る（回は 1 つだけ）。
+    /// デイリーは、受け取った時点の回に送ると、通信が世界標準時 0 時をまたいだときに次の日の回へ入ってしまう。
+    /// そこで今の回を読み込み、その回の終わりが挑戦した日の 24 時と同じときだけ、その回に送る
+    private func deliver(_ score: LeaderboardScore) async throws -> Delivery {
+        guard score.expiresAt != nil else {
+            try await service.submit(score)
+            return .sent
+        }
+        guard let occurrence = try await service.loadCurrentOccurrence(of: score.leaderboardID),
+              score.belongs(toOccurrenceEndingAt: occurrence.endDate) else {
+            return .roundClosed
+        }
+        try await occurrence.submit(score)
+        return .sent
     }
 }
