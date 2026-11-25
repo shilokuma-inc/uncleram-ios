@@ -385,6 +385,8 @@ struct CircleStamp: View {
     let text: LocalizedStringKey
     var color: Color = Theme.red
     var diameter: CGFloat = 140
+    /// 傾き（回収演出の判子は、デザインどおり -14°）
+    var angle: Angle = .degrees(-8)
 
     var body: some View {
         ZStack {
@@ -398,7 +400,7 @@ struct CircleStamp: View {
                 .padding(diameter * 0.15)
         }
         .frame(width: diameter, height: diameter)
-        .rotationEffect(.degrees(-8))
+        .rotationEffect(angle)
         .opacity(0.9)
     }
 }

@@ -54,10 +54,16 @@ enum Theme {
         .custom(weight.postScriptName, fixedSize: size)
     }
 
+    /// 回収の大見出し（Dela Gothic One。日本語だけ）
+    static func heading(_ size: CGFloat) -> Font {
+        .custom(FontName.delaGothicOne, fixedSize: size)
+    }
+
     /// 同梱した書体の PostScript 名
     nonisolated enum FontName {
         static let archivoBlack = "ArchivoBlack-Regular"
         static let courierPrimeBold = "CourierPrime-Bold"
+        static let delaGothicOne = "DelaGothicOne-Regular"
     }
 
     /// `name` に無い文字を `fallback` で出す書体（指定しないと、OS の書体で出てしまう）

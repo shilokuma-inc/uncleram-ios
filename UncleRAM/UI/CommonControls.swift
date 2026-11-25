@@ -1,12 +1,14 @@
 import SwiftUI
 
-/// 赤いインクの主ボタン（「献上をはじめる」「もう一度献上する」など）。紺の細い枠で囲む
+/// インク（既定は赤）の主ボタン（「献上をはじめる」「もう一度献上する」など）。紺の細い枠で囲む
 struct PrimaryInkButton: View {
     let title: LocalizedStringKey
     /// ボタンの中で、題の右に小さく添える文字（Mac のタイトルの「速達便 · 約 20 秒」）
     var caption: LocalizedStringKey?
     var fontSize: CGFloat = 20
     var verticalPadding: CGFloat = 22
+    /// インクの色。回収演出の「結果を見る」は、デザインどおり紺にする
+    var color: Color = Theme.red
     let action: () -> Void
 
     var body: some View {
@@ -26,7 +28,7 @@ struct PrimaryInkButton: View {
             .foregroundStyle(Theme.lightPaper)
             .frame(maxWidth: .infinity)
             .padding(.vertical, verticalPadding)
-            .background { InkSurface(color: Theme.red) }
+            .background { InkSurface(color: color) }
             .padding(6)
             .overlay { Rectangle().strokeBorder(Theme.navy, lineWidth: 1.5) }
             .contentShape(Rectangle())
