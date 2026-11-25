@@ -165,6 +165,15 @@ final class RoundEngine {
         worker.start()
     }
 
+    /// タップで献上（設定）と VoiceOver の操作。献上中なら納品し、そうでなければ献上を始める
+    func toggleDonation() {
+        if phase == .donating {
+            endHold(.released)
+        } else {
+            beginHold()
+        }
+    }
+
     /// 長押しが終わった（離した・inactive・タッチのキャンセル・ウィンドウが前面でなくなった）
     func endHold(_ reason: ReleaseReason = .released) {
         guard phase == .donating else {
@@ -359,7 +368,7 @@ extension RoundEngine {
             UInt64(Double(budget) * fill)
         }
         switch scene {
-        case .title, .home:
+        case .title, .settings, .home:
             return
         case .sign, .approach, .warning:
             let stage: (RoundPlan.HintStage, Double) = switch scene {

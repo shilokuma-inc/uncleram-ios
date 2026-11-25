@@ -41,5 +41,6 @@
 - 解放が遅いとき、アプリのせいか Mac のせいかを切り分けるには、アプリの外で同じやり方（16MB ずつ mmap し、ページごとに 16 バイトの乱数を書いて、munmap の時間だけを量る。Swift で 30 行ほど、`swiftc -O`）の小さなプログラムを、計測の前後に流す。Mac mini では 1GB あたり 8〜14ms、アプリの中の munmap は 23ms だった（2026-11-24）
 - Mac はウィンドウ 1 つだけの `Window` シーンなので、ウィンドウを閉じるとアプリごと終了する。計測中に閉じると、確保したメモリはプロセスの終了で回収されるが、途中までの計測の JSON は残らない（2026-11-23）
 - 計測の JSON の `releaseMilliseconds` は、2026-11-23 から「終わりが決まってから全解放が終わるまで（確保を止めるのを待つ時間を含む）」になった。それより前の JSON（2026-11-11 の Mac の結果など）は munmap だけの時間なので、そのまま比べない。今の munmap だけの時間は `unmapMilliseconds`（2026-11-23）
+- Mac で撮影モードを `open -n <app> --args` で起動するときは、`-screenshot-demo YES -screenshot-scene <場面>` のように `-screenshot-demo` にも値を付ける。値を付けないと、ウィンドウが開かなかった。設定の値も `-tapToDonate YES` のように起動引数（UserDefaults の引数のドメイン）で渡せる（2026-11-26）
 - Mac のアプリを Bash から起動して `screencapture -l` で撮るとき、前の起動のウィンドウの状態が残っていると、テンプレートの WindowGroup の版はウィンドウを開かないことがある。`-ApplePersistenceIgnoreState YES` を付けると開いた。ただし `Window` シーンの版では、この引数を付けるとウィンドウが開かなかったので付けない（2026-11-12）
 

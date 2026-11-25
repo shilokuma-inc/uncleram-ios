@@ -7,6 +7,8 @@ import Observation
 final class LocalStore {
     private enum Key {
         static let hasAcknowledgedSafetyNotice = "hasAcknowledgedSafetyNotice"
+        static let tapToDonate = "tapToDonate"
+        static let all = [hasAcknowledgedSafetyNotice, tapToDonate]
     }
 
     @ObservationIgnored private let defaults: UserDefaults
@@ -16,8 +18,25 @@ final class LocalStore {
         didSet { defaults.set(hasAcknowledgedSafetyNotice, forKey: Key.hasAcknowledgedSafetyNotice) }
     }
 
+    /// 設定「タップで献上」。長押しの代わりに、1 回目のタップで献上を始め、もう一度タップすると納品する
+    /// （Mac はクリックかスペースキーを 2 回。docs/SPEC.md「アクセシビリティ」）。ランキングは長押しと区別しない
+    var tapToDonate: Bool {
+        didSet { defaults.set(tapToDonate, forKey: Key.tapToDonate) }
+    }
+
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         hasAcknowledgedSafetyNotice = defaults.bool(forKey: Key.hasAcknowledgedSafetyNotice)
+        tapToDonate = defaults.bool(forKey: Key.tapToDonate)
+    }
+
+    /// 設定「データの初期化」。端末の中の記録と設定をすべて消す（2026-11-26 にユーザーが決定）。
+    /// Game Center に送った記録は消えない。値を足したら `Key.all` にも足す
+    func resetAll() {
+        for key in Key.all {
+            defaults.removeObject(forKey: key)
+        }
+        hasAcknowledgedSafetyNotice = false
+        tapToDonate = false
     }
 }

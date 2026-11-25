@@ -10,6 +10,7 @@ struct RoundScreen: View {
     @State private var monitor: RoundEventMonitor
     @State private var bench: BenchRunner
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(LocalStore.self) private var store: LocalStore?
     /// 結果からタイトルへ戻る。nil のときは「タイトルへ」を出さない
     private let onExit: (() -> Void)?
 
@@ -40,6 +41,7 @@ struct RoundScreen: View {
                 engine.showDemo(scene)
                 return
             }
+            monitor.tapToDonate = store?.tapToDonate ?? false
             monitor.start()
             bench.startFromLaunchArgumentsIfNeeded()
         }
@@ -122,27 +124,20 @@ enum ChairmanLines {
     }
 }
 
-/// 長押しで献上・離すと納品のボタン（指・クリック）。タッチのキャンセルも離したとみなす
+/// 長押しで献上・離すと納品のボタン（指・クリック）。タッチのキャンセルも離したとみなす。
+/// 設定「タップで献上」のときは、1 回目のタップで始め、もう一度タップすると納品する
 struct HoldButton: View {
     let engine: RoundEngine
     var diameter: CGFloat = 200
-    var title: LocalizedStringKey = "長押しで献上"
+    /// 設定。撮影モードやプレビューなど、AppRoot の外で使うときは無い
+    @Environment(LocalStore.self) private var store: LocalStore?
+
+    private var tapToDonate: Bool {
+        store?.tapToDonate ?? false
+    }
 
     var body: some View {
-        HoldButtonFace(holding: engine.phase == .donating, diameter: diameter, title: title)
-            .contentShape(Circle())
-            .onLongPressGesture(
-                minimumDuration: .infinity,
-                maximumDistance: .infinity,
-                perform: {},
-                onPressingChanged: { pressing in
-                    if pressing {
-                        engine.beginHold()
-                    } else {
-                        engine.endHold(.released)
-                    }
-                }
-            )
+        gesture(HoldButtonFace(holding: engine.phase == .donating, diameter: diameter, tapToDonate: tapToDonate))
             .disabled(engine.isAutomated || !(engine.phase == .ready || engine.phase == .donating))
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(Text("献上する"))
@@ -152,12 +147,32 @@ struct HoldButton: View {
                     return
                 }
                 // VoiceOver はダブルタップで開始、もう一度で納品（タップ操作と同じ。docs/SPEC.md「アクセシビリティ」）
-                if engine.phase == .donating {
-                    engine.endHold(.released)
-                } else {
-                    engine.beginHold()
-                }
+                engine.toggleDonation()
             }
+    }
+
+    @ViewBuilder
+    private func gesture(_ face: HoldButtonFace) -> some View {
+        if tapToDonate {
+            face
+                .contentShape(Circle())
+                .onTapGesture { engine.toggleDonation() }
+        } else {
+            face
+                .contentShape(Circle())
+                .onLongPressGesture(
+                    minimumDuration: .infinity,
+                    maximumDistance: .infinity,
+                    perform: {},
+                    onPressingChanged: { pressing in
+                        if pressing {
+                            engine.beginHold()
+                        } else {
+                            engine.endHold(.released)
+                        }
+                    }
+                )
+        }
     }
 }
 
