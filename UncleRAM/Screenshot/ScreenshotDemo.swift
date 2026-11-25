@@ -17,6 +17,8 @@ import Foundation
 enum ScreenshotDemo {
     /// 撮る画面。rawValue が AppStore/screenshots.json の scene と対応する
     enum Scene: String {
+        /// タイトル画面
+        case title
         /// 待機中のラウンド画面
         case home
         /// 献上中・ヒントの 1 段階目（気配）

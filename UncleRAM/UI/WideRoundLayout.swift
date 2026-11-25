@@ -26,20 +26,7 @@ struct WideRoundLayout: View {
 
     private var header: some View {
         HStack {
-            HStack(spacing: 14) {
-                Image(.hatHalftone)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 44, height: 29)
-                    .accessibilityHidden(true)
-                Text(verbatim: "ALLOCATE CORP.")
-                    .scaledFont(.typewriter(14))
-                    .tracking(1.1)
-                Text("全人類の RAM を、ひとつの AI に。")
-                    .scaledFont(.mincho(14))
-                    .tracking(0.5)
-                    .foregroundStyle(Theme.red)
-            }
+            CorporateMasthead()
             Spacer()
             HStack(alignment: .firstTextBaseline, spacing: 28) {
                 Text("速達便")
@@ -55,38 +42,8 @@ struct WideRoundLayout: View {
 
     private var leftColumn: some View {
         VStack(spacing: 16) {
-            VStack(spacing: 0) {
-                Image(.handHalftone)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(maxWidth: .infinity)
-                    // 文字を大きくすると（Dynamic Type）会長の欄が伸びるので、その分だけ絵を低くして 1 画面に収める
-                    .frame(minHeight: 160, maxHeight: 300)
-                    .clipped()
-                    .allowsHitTesting(false)
-                    .overlay(alignment: .bottom) {
-                        Rectangle().fill(Theme.navy).frame(height: 1.5)
-                    }
-                    .accessibilityHidden(true)
-                Text(verbatim: "I WANT")
-                    .font(Theme.display(34))
-                    .padding(.top, 8)
-                Text(verbatim: "YOUR RAM")
-                    .font(Theme.display(34))
-                    .foregroundStyle(Theme.red)
-                Text("あなたの RAM が必要だ")
-                    .scaledFont(.mincho(12))
-                    .tracking(1.4)
-                    .foregroundStyle(Theme.subText)
-                    .padding(.top, 4)
-            }
-            .padding(.horizontal, 10)
-            .padding(.top, 10)
-            .padding(.bottom, 12)
-            .background { InkSurface() }
-            .overlay { Rectangle().strokeBorder(Theme.navy, lineWidth: 3) }
-            .padding(7)
-            .overlay { Rectangle().strokeBorder(Theme.red, lineWidth: 3) }
+            // 文字を大きくすると（Dynamic Type）会長の欄が伸びるので、その分だけ絵を低くして 1 画面に収める
+            RecruitPoster(imageHeight: 160...300)
             ChairmanPanel(
                 line: ChairmanLines.line(for: engine),
                 stage: ChairmanLines.displayedStage(engine),
@@ -257,12 +214,20 @@ struct DonationStatement: View {
 /// 明細に出す端末の種類と搭載メモリ（機種名は送らないが、画面には種類とメモリを出す）
 enum DeviceDescription {
     static var current: String {
-        let gigabytes = Int((Double(ProcessInfo.processInfo.physicalMemory) / 1_073_741_824).rounded())
+        "\(kind)（\(installedGigabytes)GB）"
+    }
+
+    /// 端末の種類（iPhone・iPad・Mac）
+    static var kind: String {
         #if os(macOS)
-        let kind = "Mac"
+        "Mac"
         #else
-        let kind = UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone"
+        UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone"
         #endif
-        return "\(kind)（\(gigabytes)GB）"
+    }
+
+    /// 搭載メモリ（GB に丸めた値）
+    static var installedGigabytes: Int {
+        Int((Double(ProcessInfo.processInfo.physicalMemory) / 1_073_741_824).rounded())
     }
 }
