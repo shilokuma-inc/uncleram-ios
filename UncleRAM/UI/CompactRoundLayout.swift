@@ -20,7 +20,9 @@ struct CompactRoundLayout: View {
                 stage: ChairmanLines.displayedStage(engine),
                 leaning: ChairmanLines.isLeaning(engine)
             )
+            .tutorialBubble([.sign, .bluff], edge: .bottom)
             DonationReadout(engine: engine, numberSize: isShort ? 46 : 58, unitSize: isShort ? 16 : 20)
+                .tutorialBubble([.warning], edge: .top, alignment: .trailing)
             // ボタンは残りの高さに収める。文字を大きくすると（Dynamic Type）上の欄が伸びるので、その分ボタンが縮む
             GeometryReader { proxy in
                 ZStack(alignment: .topTrailing) {
@@ -29,11 +31,14 @@ struct CompactRoundLayout: View {
                             UnavailableNotice(reason: reason)
                         } else {
                             HoldButton(engine: engine, diameter: buttonDiameter(fitting: proxy.size.height))
+                                .tutorialBubble([.releaseToDeliver], edge: .top, alignment: .center)
                         }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    // 縦の画面では、練習ラウンドでも飛行船は大きくしない（尾がボタンにかかるため）。兆しはノイズの濃さと吹き出しで大きく出す
                     Airship(stage: engine.hintStage, baseSize: isShort ? Self.shortAirshipSize : Airship.defaultSize)
                         .padding(.top, 2)
+                        .tutorialBubble([.approach], edge: .bottom, alignment: .trailing)
                 }
             }
             PriceFooter(engine: engine, compact: isShort)
@@ -55,7 +60,7 @@ struct CompactRoundLayout: View {
     private var header: some View {
         HStack(alignment: .bottom) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("速達便")
+                Text(engine.isShowingPracticeRound ? "練習 · 速達便" : "速達便")
                     .scaledFont(.typewriter(12))
                     .tracking(1)
                     .foregroundStyle(Theme.subText)
@@ -71,6 +76,7 @@ struct CompactRoundLayout: View {
 /// 献上量の数字・ゲージ・回収ラインと枠。献上中は毎フレーム読み直す
 struct DonationReadout: View {
     let engine: RoundEngine
+    @Environment(TutorialCoach.self) private var coach: TutorialCoach?
     var numberSize: CGFloat = 58
     var unitSize: CGFloat = 20
     var gaugeHeight: CGFloat = 22
@@ -94,6 +100,12 @@ struct DonationReadout: View {
                             .font(Theme.display(unitSize))
                     }
                     DonationGauge(fill: engine.donatedFill, safetyLine: engine.safetyLineFill, height: gaugeHeight, client: engine.client)
+                }
+                // 献上量は毎フレーム読み直すので、ここ（献上中だけ動く TimelineView の中）で 20% を越えたかを見る
+                .onChange(of: engine.phase == .donating && engine.donatedFill >= TutorialBubble.releaseHintFill) { _, reached in
+                    if reached, !engine.isAutomated {
+                        coach?.reveal(.releaseToDeliver)
+                    }
                 }
             }
             HStack(spacing: 12) {

@@ -9,6 +9,8 @@ struct RoundScreen: View {
     @State private var engine: RoundEngine
     @State private var monitor: RoundEventMonitor
     @State private var bench: BenchRunner
+    /// 最初の 1 回で覚えることの吹き出し
+    @State private var coach = TutorialCoach()
     @Environment(\.scenePhase) private var scenePhase
     @Environment(LocalStore.self) private var store: LocalStore?
     /// 回収演出の「結果を見る」を押したか。結果の段階を出たら（次のラウンド・タイトル）戻す。
@@ -31,7 +33,8 @@ struct RoundScreen: View {
                 PaperBackground(wide: wide)
                 content(wide: wide, size: proxy.size)
                 if engine.hintStage == .warning, engine.phase == .donating {
-                    InkNoise().ignoresSafeArea()
+                    // 練習ラウンドでは兆しを大きく出す（ノイズを濃くする）
+                    InkNoise(intensity: engine.plan?.isPractice == true ? 1.6 : 1).ignoresSafeArea()
                 }
             }
         }
@@ -39,11 +42,17 @@ struct RoundScreen: View {
             BenchStatusBar(bench: bench)
         }
         .preferredColorScheme(.light)
+        .environment(coach)
         .onAppear {
             if let scene = ScreenshotDemo.scene {
                 engine.showDemo(scene)
                 return
             }
+            // 計測で起動したときは、吹き出しを出さず、練習ラウンドにもしない
+            if !BenchRunner.isRequestedByLaunchArguments {
+                coach.store = store
+            }
+            engine.isPracticeRound = !(store?.hasCompletedFirstRound ?? true)
             monitor.tapToDonate = store?.tapToDonate ?? false
             monitor.start()
             bench.startFromLaunchArgumentsIfNeeded()
@@ -53,11 +62,28 @@ struct RoundScreen: View {
             bench.cancel()
             monitor.stop()
         }
+        .onChange(of: engine.hintStage) { _, stage in
+            if let bubble = TutorialBubble.forHintStage(stage), !engine.isAutomated {
+                coach.reveal(bubble)
+            }
+        }
+        .onChange(of: engine.bluff) { _, bluff in
+            if bluff == .grinning, !engine.isAutomated {
+                coach.reveal(.bluff)
+            }
+        }
         .onChange(of: engine.phase) { _, phase in
-            if case .result = phase {
+            guard case let .result(outcome) = phase else {
+                // 結果の段階を出たら（次のラウンド・タイトル）、回収演出の「結果を見る」を戻す
+                revealsResult = false
                 return
             }
-            revealsResult = false
+            coach.dismiss()
+            // 練習ラウンドを終えたら、次から普段のラウンドにする（無効になったときは、もう一度練習にする）
+            if let completed = Self.practiceCompletion(after: outcome) {
+                store?.hasCompletedFirstRound = completed
+            }
+            engine.isPracticeRound = !(store?.hasCompletedFirstRound ?? true)
         }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
@@ -74,6 +100,19 @@ struct RoundScreen: View {
         }
     }
 
+    /// 練習ラウンドの結果のあと、「練習を終えた」をどうするか。練習ラウンドでなければ nil（変えない）。
+    /// 納品のあとで同じ結果が無効に変わる（inactive で離したあと、そのまま裏に回った）ときも結果が届くので、
+    /// そのときは、いったん記録した「練習を終えた」を取り消す（次も練習にする）
+    static func practiceCompletion(after outcome: RoundOutcome) -> Bool? {
+        guard outcome.plan.isPractice else {
+            return nil
+        }
+        if case .voided = outcome.kind {
+            return false
+        }
+        return true
+    }
+
     @ViewBuilder
     private func content(wide: Bool, size: CGSize) -> some View {
         switch engine.phase {
@@ -83,6 +122,10 @@ struct RoundScreen: View {
             CollectEffect(outcome: outcome, wide: wide) {
                 withAnimation(.easeInOut(duration: 0.25)) {
                     revealsResult = true
+                }
+                // 早期回収で初めて回収されたときの吹き出しは、結果の「抜き打ち回収」の判子の横に出すので、結果に進んでから出す
+                if outcome.plan.isEarlyCollection {
+                    coach.reveal(.earlyCollection)
                 }
             }
             .transition(.opacity)

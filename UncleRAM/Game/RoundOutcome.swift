@@ -80,6 +80,9 @@ nonisolated struct RoundOutcome: Sendable, Equatable {
     }
 
     /// 腕前スコア = 回収ラインへの到達率（納品量 ÷ 回収ライン × 100）× ニアミス倍率。最大 300 pt。回収されたら 0
+    ///
+    /// 整数にするのは、倍率をかけた後に 1 回だけ。丸め方は献上量のスコアと同じ四捨五入（`.toNearestOrAwayFromZero`）にする。
+    /// 切り捨てにすると、浮動小数の誤差（100 が 99.999… になる）で 1 pt 下がることがあり、ちょうど回収ラインで離さない限り 300 pt に届かないため
     var skillScore: Int {
         guard isSuccessful, plan.collectionLine > 0 else {
             return 0

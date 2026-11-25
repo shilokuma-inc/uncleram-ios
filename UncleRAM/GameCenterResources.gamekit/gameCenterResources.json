@@ -74,14 +74,14 @@
           "formatterSuffixSingular" : "MB",
           "locale" : "en-US",
           "localID" : "jp.shilokuma.UncleRAM.lb.daily.mb_mac_m-en-US",
-          "name" : "Daily: Donated, Mac 24–32GB"
+          "name" : "Daily: Donated, Mac 24–36GB"
         },
         {
           "formatterSuffix" : "MB",
           "formatterSuffixSingular" : "MB",
           "locale" : "ja",
           "localID" : "jp.shilokuma.UncleRAM.lb.daily.mb_mac_m-ja",
-          "name" : "デイリー 献上量 Mac 24〜32GB"
+          "name" : "デイリー 献上量 Mac 24〜36GB"
         }
       ],
       "jp.shilokuma.UncleRAM.lb.daily.mb_mac_s" : [
@@ -90,14 +90,14 @@
           "formatterSuffixSingular" : "MB",
           "locale" : "en-US",
           "localID" : "jp.shilokuma.UncleRAM.lb.daily.mb_mac_s-en-US",
-          "name" : "Daily: Donated, Mac ≤16GB"
+          "name" : "Daily: Donated, Mac ≤18GB"
         },
         {
           "formatterSuffix" : "MB",
           "formatterSuffixSingular" : "MB",
           "locale" : "ja",
           "localID" : "jp.shilokuma.UncleRAM.lb.daily.mb_mac_s-ja",
-          "name" : "デイリー 献上量 Mac 16GB 以下"
+          "name" : "デイリー 献上量 Mac 18GB 以下"
         }
       ],
       "jp.shilokuma.UncleRAM.lb.daily.skill" : [
@@ -186,14 +186,14 @@
           "formatterSuffixSingular" : "MB",
           "locale" : "en-US",
           "localID" : "jp.shilokuma.UncleRAM.lb.express.mb_mac_m-en-US",
-          "name" : "Express: Donated, Mac 24–32GB"
+          "name" : "Express: Donated, Mac 24–36GB"
         },
         {
           "formatterSuffix" : "MB",
           "formatterSuffixSingular" : "MB",
           "locale" : "ja",
           "localID" : "jp.shilokuma.UncleRAM.lb.express.mb_mac_m-ja",
-          "name" : "速達便 献上量 Mac 24〜32GB"
+          "name" : "速達便 献上量 Mac 24〜36GB"
         }
       ],
       "jp.shilokuma.UncleRAM.lb.express.mb_mac_s" : [
@@ -202,14 +202,14 @@
           "formatterSuffixSingular" : "MB",
           "locale" : "en-US",
           "localID" : "jp.shilokuma.UncleRAM.lb.express.mb_mac_s-en-US",
-          "name" : "Express: Donated, Mac ≤16GB"
+          "name" : "Express: Donated, Mac ≤18GB"
         },
         {
           "formatterSuffix" : "MB",
           "formatterSuffixSingular" : "MB",
           "locale" : "ja",
           "localID" : "jp.shilokuma.UncleRAM.lb.express.mb_mac_s-ja",
-          "name" : "速達便 献上量 Mac 16GB 以下"
+          "name" : "速達便 献上量 Mac 18GB 以下"
         }
       ],
       "jp.shilokuma.UncleRAM.lb.express.skill" : [
@@ -292,7 +292,7 @@
         },
         "archived" : false,
         "defaultFormatter" : "INTEGER",
-        "referenceName" : "Express Donated Mac 16GB or less",
+        "referenceName" : "Express Donated Mac 18GB or less",
         "scoreRangeEnd" : null,
         "scoreRangeStart" : null,
         "scoreSortType" : "DESC",
@@ -306,7 +306,7 @@
         },
         "archived" : false,
         "defaultFormatter" : "INTEGER",
-        "referenceName" : "Express Donated Mac 24-32GB",
+        "referenceName" : "Express Donated Mac 24-36GB",
         "scoreRangeEnd" : null,
         "scoreRangeStart" : null,
         "scoreSortType" : "DESC",
@@ -405,7 +405,7 @@
         "recurrenceDuration" : "P1D",
         "recurrenceRule" : "FREQ=DAILY;INTERVAL=1",
         "recurrenceStartDate" : "2026-12-01T00:00:00Z",
-        "referenceName" : "Daily Donated Mac 16GB or less",
+        "referenceName" : "Daily Donated Mac 18GB or less",
         "scoreRangeEnd" : null,
         "scoreRangeStart" : null,
         "scoreSortType" : "DESC",
@@ -422,7 +422,7 @@
         "recurrenceDuration" : "P1D",
         "recurrenceRule" : "FREQ=DAILY;INTERVAL=1",
         "recurrenceStartDate" : "2026-12-01T00:00:00Z",
-        "referenceName" : "Daily Donated Mac 24-32GB",
+        "referenceName" : "Daily Donated Mac 24-36GB",
         "scoreRangeEnd" : null,
         "scoreRangeStart" : null,
         "scoreSortType" : "DESC",
