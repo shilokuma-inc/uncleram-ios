@@ -13,6 +13,9 @@ struct RoundScreen: View {
     @State private var coach = TutorialCoach()
     @Environment(\.scenePhase) private var scenePhase
     @Environment(LocalStore.self) private var store: LocalStore?
+    /// 回収演出の「結果を見る」を押したか。結果の段階を出たら（次のラウンド・タイトル）戻す。
+    /// 撮影モードの `collected` は、回収演出の先の結果の画面を撮る
+    @State private var revealsResult = ScreenshotDemo.scene == .collected
     /// 結果からタイトルへ戻る。nil のときは「タイトルへ」を出さない
     private let onExit: (() -> Void)?
 
@@ -71,6 +74,8 @@ struct RoundScreen: View {
         }
         .onChange(of: engine.phase) { _, phase in
             guard case let .result(outcome) = phase else {
+                // 結果の段階を出たら（次のラウンド・タイトル）、回収演出の「結果を見る」を戻す
+                revealsResult = false
                 return
             }
             coach.dismiss()
@@ -79,9 +84,6 @@ struct RoundScreen: View {
                 store?.hasCompletedFirstRound = completed
             }
             engine.isPracticeRound = !(store?.hasCompletedFirstRound ?? true)
-            if outcome.kind == .collected, outcome.plan.isEarlyCollection, !engine.isAutomated {
-                coach.reveal(.earlyCollection)
-            }
         }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
@@ -114,6 +116,19 @@ struct RoundScreen: View {
     @ViewBuilder
     private func content(wide: Bool, size: CGSize) -> some View {
         switch engine.phase {
+        // 回収されたら、結果の前に回収演出を出す。監査（納品扱い）と無効（店じまい）には出さない（docs/SPEC.md「ラウンドの状態と中断」）。
+        // 計測中は出さない（次のラウンドまでの間に演出を描いて、落ちたフレームの計測を乱さないように）
+        case let .result(outcome) where outcome.kind == .collected && !revealsResult && !engine.isAutomated:
+            CollectEffect(outcome: outcome, wide: wide) {
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    revealsResult = true
+                }
+                // 早期回収で初めて回収されたときの吹き出しは、結果の「抜き打ち回収」の判子の横に出すので、結果に進んでから出す
+                if outcome.plan.isEarlyCollection {
+                    coach.reveal(.earlyCollection)
+                }
+            }
+            .transition(.opacity)
         case let .result(outcome):
             ResultView(
                 outcome: outcome,
