@@ -202,45 +202,56 @@ struct DonationGauge: View {
 }
 
 /// ゲージの背景の濃淡。取引先の回収ラインが散らばる範囲を薄い赤で描き、どこから危ないかを読まずに分からせる
-/// （docs/SPEC.md「説明なしで分かる UI」の「ゲージの濃淡」）。普段の範囲（アロケート社は 55〜80%）を濃く、
-/// 早期回収の範囲（30〜50%）をうっすら置く。そのラウンドのラインそのものは見せない
+/// （docs/SPEC.md「説明なしで分かる UI」の「ゲージの濃淡」）。docs/design/Tutorial.png に合わせ、
+/// 早期回収の範囲（アロケート社は 30〜50%）を薄い赤で塗り、普段の範囲（55〜80%）を薄い赤の斜線にする。
+/// そのラウンドのラインそのものは見せない
 struct CollectionLineShading: View {
     let client: Client
     /// ゲージの中の幅
     let width: CGFloat
 
-    /// 普段の範囲と、早期回収の範囲の濃さ
-    static let regularOpacity = 0.2
-    static let earlyOpacity = 0.08
+    /// 早期回収の範囲の塗りと、普段の範囲の斜線の濃さ（デザインの rgba(184,50,43, 0.10 / 0.14 / 0.30)）
+    static let earlyOpacity = 0.10
+    static let regularBaseOpacity = 0.14
+    static let regularStripeOpacity = 0.30
 
     var body: some View {
         ZStack(alignment: .leading) {
-            band(client.earlyLineRange, opacity: Self.earlyOpacity)
-            band(client.lineRange, opacity: Self.regularOpacity)
+            Rectangle()
+                .fill(Theme.red.opacity(Self.earlyOpacity))
+                .frame(width: span(client.earlyLineRange))
+                .offset(x: width * client.earlyLineRange.lowerBound)
+            regularBand
+                .frame(width: span(client.lineRange))
+                .offset(x: width * client.lineRange.lowerBound)
         }
         .frame(width: width, alignment: .leading)
         .allowsHitTesting(false)
         .accessibilityHidden(true)
     }
 
-    /// 範囲の両端は、境目がはっきりしすぎないよう、少しぼかす
-    private func band(_ range: ClosedRange<Double>, opacity: Double) -> some View {
-        let color = Theme.red.opacity(opacity)
-        return Rectangle()
-            .fill(
-                LinearGradient(
-                    stops: [
-                        .init(color: color.opacity(0), location: 0),
-                        .init(color: color, location: 0.12),
-                        .init(color: color, location: 0.88),
-                        .init(color: color.opacity(0), location: 1)
-                    ],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-            )
-            .frame(width: width * (range.upperBound - range.lowerBound))
-            .offset(x: width * range.lowerBound)
+    private func span(_ range: ClosedRange<Double>) -> CGFloat {
+        width * (range.upperBound - range.lowerBound)
+    }
+
+    /// 薄い赤の地に、幅 2pt の濃い斜線を 6pt おきに引く（デザインの repeating-linear-gradient(135deg, …)）
+    private var regularBand: some View {
+        Rectangle()
+            .fill(Theme.red.opacity(Self.regularBaseOpacity))
+            .overlay {
+                Canvas { context, size in
+                    var x: CGFloat = -size.height
+                    while x < size.width {
+                        var path = Path()
+                        path.move(to: CGPoint(x: x, y: 0))
+                        path.addLine(to: CGPoint(x: x + size.height, y: size.height))
+                        let stripe = Theme.red.opacity(Self.regularStripeOpacity - Self.regularBaseOpacity)
+                        context.stroke(path, with: .color(stripe), lineWidth: 2)
+                        x += 6
+                    }
+                }
+            }
+            .clipped()
     }
 }
 
