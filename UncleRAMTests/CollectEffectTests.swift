@@ -85,11 +85,12 @@ struct CollectEffectTests {
         #expect(!timeline.frame(at: 0).isActionEnabled)
     }
 
-    /// 「控えめにする」は、今は「視差効果を減らす」だけで決まる。「点滅する光を弱める」は赤と青のずれだけを止める
+    /// 「控えめにする」は、「視差効果を減らす」か設定「回収演出を控えめにする」のどちらかで決まる。「点滅する光を弱める」は赤と青のずれだけを止める
     @Test
     func currentStyleFollowsAccessibilitySettings() {
         #expect(CollectEffectTimeline.Style.current(reduceMotion: false, dimsFlashingLights: false) == .full)
         #expect(CollectEffectTimeline.Style.current(reduceMotion: true, dimsFlashingLights: false).isSubdued)
+        #expect(CollectEffectTimeline.Style.current(reduceMotion: false, reducesCollectEffect: true, dimsFlashingLights: false).isSubdued)
         let dimmed = CollectEffectTimeline.Style.current(reduceMotion: false, dimsFlashingLights: true)
         #expect(!dimmed.isSubdued)
         #expect(dimmed.freezesColorShift)

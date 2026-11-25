@@ -14,13 +14,21 @@ struct CollectEffect: View {
     let onShowResult: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// 設定「回収演出を控えめにする」
+    @Environment(LocalStore.self) private var store: LocalStore?
     @State private var startDate = Date()
     @State private var isFinished = false
     /// 「点滅する光を弱める」。演出は 2 秒ほどで終わるので、出したときの値で決める
     @State private var dimsFlashingLights = MADimFlashingLightsEnabled()
 
     private var timeline: CollectEffectTimeline {
-        CollectEffectTimeline(style: .current(reduceMotion: reduceMotion, dimsFlashingLights: dimsFlashingLights))
+        CollectEffectTimeline(
+            style: .current(
+                reduceMotion: reduceMotion,
+                reducesCollectEffect: store?.reducesCollectEffect ?? false,
+                dimsFlashingLights: dimsFlashingLights
+            )
+        )
     }
 
     var body: some View {

@@ -16,9 +16,9 @@ nonisolated struct CollectEffectTimeline: Sendable {
         static let full = Self(isSubdued: false, freezesColorShift: false)
 
         /// 今の設定での見せ方。「控えめにする」かどうかは、ここの `isSubdued` の 1 か所だけで決める。
-        /// 今は「視差効果を減らす」だけで決める。設定の「回収演出を控えめにする」（#36）が入ったら、ここで一緒に見る
-        static func current(reduceMotion: Bool, dimsFlashingLights: Bool) -> Self {
-            let isSubdued = reduceMotion
+        /// OS の「視差効果を減らす」か、アプリの設定「回収演出を控えめにする」のどちらかがオンなら控えめにする
+        static func current(reduceMotion: Bool, reducesCollectEffect: Bool = false, dimsFlashingLights: Bool) -> Self {
+            let isSubdued = reduceMotion || reducesCollectEffect
             return Self(isSubdued: isSubdued, freezesColorShift: dimsFlashingLights)
         }
     }

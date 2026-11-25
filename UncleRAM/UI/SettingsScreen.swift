@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// 設定（docs/SPEC.md「初回起動と設定」）。今の版で働く先がある項目だけを置く。
-/// 振動（iPhone）・回収演出を控えめにするは、振動・回収演出（#30）を入れるときに足す。
+/// 振動（iPhone）は、振動を入れるときに足す。
 /// BGM と効果音の音量・購入を復元・翻訳の誤りを報告は段取り 4、プライバシーポリシーとサポートは紹介ページができたら足す
 struct SettingsScreen: View {
     let onClose: () -> Void
@@ -92,6 +92,19 @@ struct SettingsScreen: View {
                     }
                 }
                 // Mac の既定はチェックボックスなので、iPhone と同じスイッチにそろえる
+                .toggleStyle(.switch)
+                .tint(Theme.red)
+                DashedRule()
+                Toggle(isOn: $store.reducesCollectEffect) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("回収演出を控えめにする")
+                            .scaledFont(.mincho(16))
+                        Text("回収されたときの、絵のずれと画面の揺れを止めます。")
+                            .scaledFont(.mincho(13, .medium))
+                            .foregroundStyle(Theme.subText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
                 .toggleStyle(.switch)
                 .tint(Theme.red)
                 DashedRule()
