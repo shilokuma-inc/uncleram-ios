@@ -8,6 +8,8 @@ struct ResultView: View {
     let releaseDuration: TimeInterval?
     let wide: Bool
     let onRetry: () -> Void
+    /// タイトルへ戻る。nil のときは出さない
+    var onExit: (() -> Void)?
 
     var body: some View {
         ScrollView {
@@ -23,7 +25,14 @@ struct ResultView: View {
                     figures
                 }
                 Spacer(minLength: 24)
-                retryButton
+                PrimaryInkButton(title: "もう一度献上する", action: onRetry)
+                    .keyboardShortcut(.defaultAction)
+                if let onExit {
+                    // ラウンドの途中には置かない（結果のときだけ）。Mac は esc でも戻れる
+                    TextLink(title: "タイトルへ", action: onExit)
+                        .keyboardShortcut(.cancelAction)
+                        .frame(maxWidth: .infinity)
+                }
                 if let releaseDuration {
                     Text("解放 \(Int((releaseDuration * 1000).rounded())) ms")
                         .scaledFont(.typewriter(11))
@@ -181,22 +190,6 @@ struct ResultView: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 40)
             .doubleFrame(inset: 8)
-    }
-
-    private var retryButton: some View {
-        Button(action: onRetry) {
-            Text("もう一度献上する")
-                .scaledFont(.mincho(20, .extraBold))
-                .tracking(4)
-                .foregroundStyle(Theme.lightPaper)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 22)
-                .background { InkSurface(color: Theme.red) }
-                .padding(6)
-                .overlay { Rectangle().strokeBorder(Theme.navy, lineWidth: 1.5) }
-        }
-        .buttonStyle(.plain)
-        .keyboardShortcut(.defaultAction)
     }
 }
 

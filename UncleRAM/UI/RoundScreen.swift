@@ -10,8 +10,11 @@ struct RoundScreen: View {
     @State private var monitor: RoundEventMonitor
     @State private var bench: BenchRunner
     @Environment(\.scenePhase) private var scenePhase
+    /// 結果からタイトルへ戻る。nil のときは「タイトルへ」を出さない
+    private let onExit: (() -> Void)?
 
-    init(engine: RoundEngine = RoundEngine()) {
+    init(engine: RoundEngine = RoundEngine(), onExit: (() -> Void)? = nil) {
+        self.onExit = onExit
         _engine = State(initialValue: engine)
         _monitor = State(initialValue: RoundEventMonitor(engine: engine))
         _bench = State(initialValue: BenchRunner(engine: engine))
@@ -64,9 +67,13 @@ struct RoundScreen: View {
     private func content(wide: Bool, size: CGSize) -> some View {
         switch engine.phase {
         case let .result(outcome):
-            ResultView(outcome: outcome, releaseDuration: engine.lastReleaseDuration, wide: wide) {
-                engine.reset()
-            }
+            ResultView(
+                outcome: outcome,
+                releaseDuration: engine.lastReleaseDuration,
+                wide: wide,
+                onRetry: { engine.reset() },
+                onExit: onExit
+            )
         default:
             if wide {
                 WideRoundLayout(engine: engine, bench: bench)
