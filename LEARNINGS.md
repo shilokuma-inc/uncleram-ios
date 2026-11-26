@@ -40,7 +40,7 @@
 ## 動画
 
 - AVAssetWriter に絵と音の 2 つの入力を足して `expectsMediaDataInRealTime = false` で書くとき、音を「絵の時刻 + 0.5 秒」までしか書かないと、絵の入力が受け取れないまま止まった（書き手は自分の区切りで交互に並べるので、もっと先の音を待つ）。絵を受け取れないときは、音を 1 回分ずつ先に書いてから見直す（`ReplayVideoEncoder`）（2026-11-26）
-- 1080×1920 の SwiftUI を ImageRenderer で 1 コマずつ描くと、Mac では 1 コマ 5ms ほどで、10 秒の動画が 1〜2 秒で書き出せた。描いた絵（BGRA、1 コマ 8MB）をそのまま AVAssetWriter に渡すと、書き手が受け取れるだけ（iOS Simulator で 40 コマほど）先に溜めて、使用量が +458MB になった。vImage で YUV（4:2:0、3MB）に詰め直し、`CVPixelBufferPoolCreatePixelBufferWithAuxAttributes` に `kCVPixelBufferPoolAllocationThresholdKey`（6）を渡して、プールから取れる数を抑えると溜まらなくなった（Mac で +60MB ほど）。`render(rasterizationScale:)` で自分の CGContext に描く（CPU で描く）方法は、3 倍遅く、使用量もあまり変わらなかった（2026-11-26）
+- 1080×1920 の SwiftUI を ImageRenderer で 1 コマずつ描くと、Mac では 1 コマ 5ms ほどで、10 秒の動画が 1〜2 秒で書き出せた。描いた絵を手放せば、描くだけでは使用量はほとんど増えない（全部のコマを描いて +10MB）。書き出しの間に増えるのは符号化の係の中の分で、Mac（ハードウェアで符号化）は BGRA のまま渡すと +130MB、vImage で YUV（4:2:0）に詰め直し、`CVPixelBufferPoolCreatePixelBufferWithAuxAttributes` に `kCVPixelBufferPoolAllocationThresholdKey` を渡してプールから取れる数を抑えると +60MB ほどになった。iOS Simulator はソフトウェアで符号化するので、係が 40 コマほどを中に持ち、プールを抑えても +410MB ほどで頭打ちになる（書き終えると戻る）。Simulator の使用量で実機を見積もらない。`render(rasterizationScale:)` で自分の CGContext に描く（CPU で描く）方法は、3 倍遅く、使用量もあまり変わらなかった（2026-11-26）
 - SwiftUI の `VideoPlayer`（`import AVKit`）だけを使うと、アプリに AVKit.framework が結び付けられず（`otool -L` に `_AVKit_SwiftUI` だけが出る）、Mac で見本を出したところで `failed to demangle superclass of VideoPlayerView from mangled name 'So12AVPlayerViewC'` で落ちた。`AVPlayerView`（Mac）・`AVPlayerViewController`（iOS）を Representable で直接使うと、AVKit が結び付けられて落ちない（2026-11-26）
 
 ## 仕様と試算
