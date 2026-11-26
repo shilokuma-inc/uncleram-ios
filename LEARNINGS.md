@@ -25,6 +25,7 @@
 ## 画面の組み方
 
 - `scaleEffect` で画面ごと拡大しても（iPad で iPhone のレイアウトを拡大する `ScreenLayout`）、文字と線はにじまない。SwiftUI は拡大したあとの大きさで描き直す（2026-11-26、iPad Pro 13 インチの Simulator で 1.5 倍にして確かめた）
+- `scaleEffect`（倍率 1 でも）の中にある ScrollView のボタンは、XCUITest がスクロールして見えるようにした直後に「Computed hit point {-1, -1}」で押せないことがある（iPhone 17 Pro の Simulator・Xcode 26.6 で、タイトルの「設定」。develop の形では起きなかった）。拡大しない端末（iPhone・Mac）では `scaleEffect` を通さない（2026-11-26）
 
 ## Game Center
 
