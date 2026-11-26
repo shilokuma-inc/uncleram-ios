@@ -214,4 +214,28 @@ final class UncleRAMUITests: XCTestCase {
         wait(for: [dismissed], timeout: 5)
         XCTAssertTrue(app.buttons["もう一度献上する"].exists)
     }
+
+    /// 長押しして離した結果から、共有のプレビューの「動画」を選ぶと、記録からリプレイ動画を作り、「共有する…」「動画を保存」が出る
+    @MainActor
+    func testShareVideoMakesReplayFromRecordedRound() throws {
+        let app = launch()
+        openRound(app)
+
+        app.buttons["献上する"].press(forDuration: 1.5)
+        let share = app.buttons["明細書をシェア"]
+        XCTAssertTrue(share.waitForExistence(timeout: 5))
+        share.tap()
+        let videoTab = app.buttons["動画"]
+        XCTAssertTrue(videoTab.waitForExistence(timeout: 5))
+        videoTab.tap()
+
+        // 書き出しは 1 秒ほど（混んだ CI でも長めに待つ）
+        let done = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "動画ができました")).firstMatch
+        XCTAssertTrue(done.waitForExistence(timeout: 90))
+        XCTAssertTrue(app.buttons["動画を保存"].exists)
+        XCTAssertTrue(app.buttons["共有する…"].exists)
+
+        app.buttons["閉じる"].tap()
+        XCTAssertTrue(app.buttons["もう一度献上する"].waitForExistence(timeout: 5))
+    }
 }
