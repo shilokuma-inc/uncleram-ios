@@ -21,6 +21,8 @@ enum ScreenshotDemo {
         case title
         /// 設定の画面
         case settings
+        /// ランキングの画面（サインインしていないとき）
+        case ranking
         /// タイトルで「?」の遊び方の 3 コマを開いたところ
         case howToPlay
         /// 今日のデイリーの結果: ニアミスで納品（回収ラインは明かさない）

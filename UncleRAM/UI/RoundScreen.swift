@@ -17,6 +17,8 @@ struct RoundScreen: View {
     @State private var sounds: RoundSounds
     @Environment(\.scenePhase) private var scenePhase
     @Environment(LocalStore.self) private var store: LocalStore?
+    /// ランキングに送る。撮影モードやプレビューなど、AppRoot の外では無い
+    @Environment(RankingCenter.self) private var ranking: RankingCenter?
     /// 回収演出の「結果を見る」を押したか。結果の段階を出たら（次のラウンド・タイトル）戻す。
     /// 撮影モードの `collected` は、回収演出の先の結果の画面を撮る
     @State private var revealsResult = ScreenshotDemo.scene == .collected
@@ -113,6 +115,11 @@ struct RoundScreen: View {
                 return
             }
             coach.dismiss()
+            // ランキングに送り（練習・過去の日・無効は送らない）、最初のラウンドを終えたら Game Center のサインインを始める
+            if !engine.isAutomated, ScreenshotDemo.scene == nil {
+                ranking?.record(outcome, mode: mode)
+                ranking?.startSignIn()
+            }
             // 練習ラウンドを終えたら、次から普段のラウンドにする（無効になったときは、もう一度練習にする）
             if let completed = Self.practiceCompletion(after: outcome) {
                 store?.hasCompletedFirstRound = completed

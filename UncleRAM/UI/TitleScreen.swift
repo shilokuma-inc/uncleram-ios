@@ -7,6 +7,7 @@ struct TitleScreen: View {
     let onStartExpress: () -> Void
     let onStartDaily: (DailyChallenge) -> Void
     let onOpenSettings: () -> Void
+    let onOpenRanking: () -> Void
     /// 「?」から開く遊び方の 3 コマ。撮影モードの howToPlay では開いた状態で始める
     @State private var showsHowToPlay = ScreenshotDemo.scene == .howToPlay
 
@@ -16,7 +17,12 @@ struct TitleScreen: View {
             ZStack {
                 PaperBackground(wide: wide)
                 if wide {
-                    WideTitleLayout(onStartExpress: onStartExpress, onStartDaily: onStartDaily, onOpenSettings: onOpenSettings) {
+                    WideTitleLayout(
+                        onStartExpress: onStartExpress,
+                        onStartDaily: onStartDaily,
+                        onOpenSettings: onOpenSettings,
+                        onOpenRanking: onOpenRanking
+                    ) {
                         showsHowToPlay = true
                     }
                 } else {
@@ -26,7 +32,8 @@ struct TitleScreen: View {
                             height: proxy.size.height,
                             onStartExpress: onStartExpress,
                             onStartDaily: onStartDaily,
-                            onOpenSettings: onOpenSettings
+                            onOpenSettings: onOpenSettings,
+                            onOpenRanking: onOpenRanking
                         ) { showsHowToPlay = true }
                             .frame(maxWidth: 480)
                             .frame(maxWidth: .infinity, minHeight: proxy.size.height)
@@ -141,6 +148,7 @@ private struct CompactTitleLayout: View {
     let onStartExpress: () -> Void
     let onStartDaily: (DailyChallenge) -> Void
     let onOpenSettings: () -> Void
+    let onOpenRanking: () -> Void
     let onShowHowToPlay: () -> Void
     @Environment(LocalStore.self) private var store: LocalStore?
 
@@ -175,8 +183,15 @@ private struct CompactTitleLayout: View {
             if store?.hasCompletedFirstRound == true {
                 DailyPanel(record: store?.dailyRecord, onStart: onStartDaily, compact: true)
             }
-            // デザインは「強化 ✦ ランキング ✦ 設定」。強化とランキングは、行き先の画面ができたら並べる
-            TextLink(title: "設定", action: onOpenSettings)
+            // デザインは「強化 ✦ ランキング ✦ 設定」。強化は、行き先の画面ができたら並べる
+            HStack(spacing: 14) {
+                TextLink(title: "ランキング", action: onOpenRanking)
+                Text(verbatim: "✦")
+                    .font(Theme.mincho(13))
+                    .foregroundStyle(Theme.red)
+                    .accessibilityHidden(true)
+                TextLink(title: "設定", action: onOpenSettings)
+            }
             FictionDisclaimer()
         }
         .padding(.horizontal, 20)
@@ -191,6 +206,7 @@ private struct WideTitleLayout: View {
     let onStartExpress: () -> Void
     let onStartDaily: (DailyChallenge) -> Void
     let onOpenSettings: () -> Void
+    let onOpenRanking: () -> Void
     let onShowHowToPlay: () -> Void
     @Environment(LocalStore.self) private var store: LocalStore?
 
@@ -199,8 +215,9 @@ private struct WideTitleLayout: View {
             HStack {
                 CorporateMasthead()
                 Spacer()
-                // デザインは「強化・ランキング・設定」。強化とランキングは、行き先の画面ができたら並べる
+                // デザインは「強化・ランキング・設定」。強化は、行き先の画面ができたら並べる
                 HowToPlayButton(action: onShowHowToPlay)
+                TextLink(title: "ランキング", action: onOpenRanking)
                 TextLink(title: "設定", action: onOpenSettings)
                     .keyboardShortcut(",", modifiers: .command)
             }
