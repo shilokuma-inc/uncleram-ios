@@ -327,7 +327,7 @@ extension ReplayTests {
         #expect(abs(try await videoTrack.load(.nominalFrameRate) - 30) < 0.5)
         #expect(try await !asset.loadTracks(withMediaType: .audio).isEmpty)
         // 1 コマずつ書いて手放すので、コマの数（155 コマ × 8MB = 1.2GB）に比例して増えない。
-        // 増える分の多くは ImageRenderer が描くときの絵の置き場（graphics）で、書き出しのあと数秒で戻る（Mac で +130MB ほど）
+        // 符号化を待つコマは 6 コマまで（YUV で 1 コマ 3MB）。残りは書き手と ImageRenderer が描くときの絵の置き場で、書き出しのあと数秒で戻る
         let growth = Double(peak > before ? peak - before : 0) / Double(Self.megabyte)
         let remaining = Double(after > before ? after - before : 0) / Double(Self.megabyte)
         print("replay export: \(timeline.frameCount) frames, footprint +\(Int(growth)) MB at peak, +\(Int(remaining)) MB after")
