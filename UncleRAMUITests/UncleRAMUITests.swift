@@ -15,10 +15,18 @@ final class UncleRAMUITests: XCTestCase {
 
     /// 起動する。初回の案内を閉じたかは、起動引数（UserDefaults の引数のドメイン）で決めて、前のテストの状態に左右されないようにする
     @MainActor
-    private func launch(acknowledgedSafetyNotice: Bool = true, tapToDonate: Bool = false) -> XCUIApplication {
+    private func launch(
+        acknowledgedSafetyNotice: Bool = true,
+        tapToDonate: Bool = false,
+        completedFirstRound: Bool? = nil
+    ) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += ["-hasAcknowledgedSafetyNotice", acknowledgedSafetyNotice ? "YES" : "NO"]
         app.launchArguments += ["-tapToDonate", tapToDonate ? "YES" : "NO"]
+        if let completedFirstRound {
+            // デイリーの欄を出すかどうかと、今日のデイリーの記録（文字を渡すとデータとして読めず、記録なしになる）
+            app.launchArguments += ["-hasCompletedFirstRound", completedFirstRound ? "YES" : "NO", "-dailyRecord.v1", "none"]
+        }
         app.launch()
         return app
     }
@@ -91,6 +99,35 @@ final class UncleRAMUITests: XCTestCase {
         sleep(1)
         button.tap()
         XCTAssertTrue(app.buttons["もう一度献上する"].waitForExistence(timeout: 5))
+    }
+
+    /// 練習ラウンドを終えるまでは、タイトルにデイリーの欄を出さない
+    @MainActor
+    func testDailyIsHiddenBeforeFirstRound() throws {
+        let app = launch(completedFirstRound: false)
+
+        XCTAssertTrue(app.buttons["献上をはじめる"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["挑戦する"].exists)
+    }
+
+    /// デイリーは 1 日 1 回。結果には「もう一度献上する」を出さず、タイトルの欄は「本日は献上済み」になる
+    @MainActor
+    func testDailyIsPlayableOncePerDay() throws {
+        let app = launch(completedFirstRound: true)
+
+        let challenge = app.buttons["挑戦する"]
+        XCTAssertTrue(challenge.waitForExistence(timeout: 5))
+        challenge.tap()
+        let button = app.buttons["献上する"]
+        XCTAssertTrue(button.waitForExistence(timeout: 5))
+        button.press(forDuration: 1.5)
+
+        let backToTitle = app.buttons["タイトルへ"]
+        XCTAssertTrue(backToTitle.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["もう一度献上する"].exists)
+        backToTitle.tap()
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH '本日は献上済み'")).firstMatch.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["挑戦する"].exists)
     }
 
     /// タイトルの「?」で遊び方の 3 コマが開き、「閉じる」（×）で閉じる

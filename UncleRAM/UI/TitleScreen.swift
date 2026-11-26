@@ -5,6 +5,7 @@ import SwiftUI
 /// 画面ができたときに足す（2026-11-26 にユーザーが決定）
 struct TitleScreen: View {
     let onStartExpress: () -> Void
+    let onStartDaily: (DailyChallenge) -> Void
     let onOpenSettings: () -> Void
     /// 「?」から開く遊び方の 3 コマ。撮影モードの howToPlay では開いた状態で始める
     @State private var showsHowToPlay = ScreenshotDemo.scene == .howToPlay
@@ -15,13 +16,16 @@ struct TitleScreen: View {
             ZStack {
                 PaperBackground(wide: wide)
                 if wide {
-                    WideTitleLayout(onStartExpress: onStartExpress, onOpenSettings: onOpenSettings) { showsHowToPlay = true }
+                    WideTitleLayout(onStartExpress: onStartExpress, onStartDaily: onStartDaily, onOpenSettings: onOpenSettings) {
+                        showsHowToPlay = true
+                    }
                 } else {
                     // 低い画面や、文字を大きくしたとき（Dynamic Type）は縦に送れるようにする。収まるときは下の注記を画面の下に寄せる
                     ScrollView {
                         CompactTitleLayout(
                             height: proxy.size.height,
                             onStartExpress: onStartExpress,
+                            onStartDaily: onStartDaily,
                             onOpenSettings: onOpenSettings
                         ) { showsHowToPlay = true }
                             .frame(maxWidth: 480)
@@ -135,8 +139,10 @@ struct FictionDisclaimer: View {
 private struct CompactTitleLayout: View {
     let height: CGFloat
     let onStartExpress: () -> Void
+    let onStartDaily: (DailyChallenge) -> Void
     let onOpenSettings: () -> Void
     let onShowHowToPlay: () -> Void
+    @Environment(LocalStore.self) private var store: LocalStore?
 
     /// iPhone SE のように低い画面では、指差す手の絵を低くする
     private var isShort: Bool {
@@ -164,6 +170,11 @@ private struct CompactTitleLayout: View {
             Spacer(minLength: 8)
             PrimaryInkButton(title: "献上をはじめる", fontSize: 17, verticalPadding: 15, action: onStartExpress)
                 .keyboardShortcut(.defaultAction)
+            // デイリーは、初めての 1 回（練習ラウンド）を終えてから開く（docs/SPEC.md「少しずつ開く」）。
+            // iPhone のデザインには無いので、「取引先を選ぶ」の場所に置く
+            if store?.hasCompletedFirstRound == true {
+                DailyPanel(record: store?.dailyRecord, onStart: onStartDaily, compact: true)
+            }
             // デザインは「強化 ✦ ランキング ✦ 設定」。強化とランキングは、行き先の画面ができたら並べる
             TextLink(title: "設定", action: onOpenSettings)
             FictionDisclaimer()
@@ -178,8 +189,10 @@ private struct CompactTitleLayout: View {
 /// Mac（と、広い iPad）のタイトル。右の列（本日のデイリー・前回のご提供）は、デイリーをつなぐときに足す
 private struct WideTitleLayout: View {
     let onStartExpress: () -> Void
+    let onStartDaily: (DailyChallenge) -> Void
     let onOpenSettings: () -> Void
     let onShowHowToPlay: () -> Void
+    @Environment(LocalStore.self) private var store: LocalStore?
 
     var body: some View {
         VStack(spacing: 14) {
@@ -211,6 +224,11 @@ private struct WideTitleLayout: View {
                 }
                 .frame(maxWidth: 480)
                 Spacer(minLength: 0)
+                // 右の列。デイリーは、初めての 1 回（練習ラウンド）を終えてから開く
+                if store?.hasCompletedFirstRound == true {
+                    DailyPanel(record: store?.dailyRecord, onStart: onStartDaily)
+                        .frame(width: 300)
+                }
             }
             .frame(maxHeight: .infinity)
             HStack {

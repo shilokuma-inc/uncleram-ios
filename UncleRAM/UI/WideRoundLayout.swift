@@ -4,6 +4,7 @@ import SwiftUI
 /// 左にポスターと会長、中央に献上量と長押しボタン、右に回収飛行船と献上中の明細。広げると中央の列が伸びる
 struct WideRoundLayout: View {
     let engine: RoundEngine
+    @Environment(\.roundMode) private var roundMode
     let bench: BenchRunner
     /// 「?」で遊び方の 3 コマを開く
     let onShowHowToPlay: () -> Void
@@ -37,7 +38,7 @@ struct WideRoundLayout: View {
             CorporateMasthead()
             Spacer()
             HStack(alignment: .firstTextBaseline, spacing: 28) {
-                Text(engine.isShowingPracticeRound ? "練習 · 速達便" : "速達便")
+                Text(roundMode.title(practice: engine.isShowingPracticeRound))
                     .scaledFont(.typewriter(12))
                     .tracking(1)
                     .foregroundStyle(Theme.subText)
