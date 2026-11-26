@@ -384,7 +384,7 @@ extension RoundEngine {
             UInt64(Double(budget) * fill)
         }
         switch scene {
-        case .title, .settings, .howToPlay, .home:
+        case .title, .settings, .ranking, .howToPlay, .home:
             return
         case .sign, .approach, .warning:
             let stage: (RoundPlan.HintStage, Double) = switch scene {

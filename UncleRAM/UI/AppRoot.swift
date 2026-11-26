@@ -1,15 +1,19 @@
 import SwiftUI
 
-/// 画面の行き来（タイトル → 速達便のラウンド → 結果 → タイトル、タイトル → 設定）と、初回の案内
+/// 画面の行き来（タイトル → 速達便のラウンド → 結果 → タイトル、タイトル → 設定・ランキング）と、初回の案内
 struct AppRoot: View {
     enum Destination: Equatable {
         case title
         case express
         case daily(DailyChallenge)
         case settings
+        case ranking
     }
 
     @State private var store = LocalStore()
+    /// ランキングに送る・サインイン・送り直し
+    @State private var ranking = RankingCenter()
+    @Environment(\.scenePhase) private var scenePhase
     @State private var destination = AppRoot.initialDestination
 
     /// 撮影モードのラウンドの場面と、起動引数での計測は、タイトルを通さずにラウンドを開く
@@ -19,6 +23,8 @@ struct AppRoot: View {
             return .title
         case .settings:
             return .settings
+        case .ranking:
+            return .ranking
         case .dailyDelivered:
             return .daily(.today())
         case .some:
@@ -42,7 +48,8 @@ struct AppRoot: View {
                     TitleScreen(
                         onStartExpress: { destination = .express },
                         onStartDaily: { destination = .daily($0) },
-                        onOpenSettings: { destination = .settings }
+                        onOpenSettings: { destination = .settings },
+                        onOpenRanking: { destination = .ranking }
                     )
                     .transition(.opacity)
                 case .express:
@@ -56,6 +63,9 @@ struct AppRoot: View {
                         onExit: { destination = .title }
                     )
                     .transition(.opacity)
+                case .ranking:
+                    RankingScreen { destination = .title }
+                        .transition(.opacity)
                 case .settings:
                     SettingsScreen(
                         onClose: { destination = .title },
@@ -79,5 +89,23 @@ struct AppRoot: View {
         .animation(.easeInOut(duration: 0.25), value: destination)
         .animation(.easeInOut(duration: 0.25), value: showsSafetyNotice)
         .environment(store)
+        .environment(ranking)
+        .onAppear {
+            // Game Center のサインインは、最初のラウンドを終えてから始める（それまでは RoundScreen が結果のときに始める）。
+            // 撮影モードと計測では始めない
+            if store.hasCompletedFirstRound, !ScreenshotDemo.isEnabled, !BenchRunner.isRequestedByLaunchArguments {
+                ranking.startSignIn()
+            }
+        }
+        .onChange(of: ranking.signIn.state) { _, state in
+            if state == .needsSignInScreen, let viewController = ranking.signIn.signInViewController {
+                GameCenterPresenter.present(viewController)
+            }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active, ranking.signIn.state == .signedIn {
+                ranking.resendPending()
+            }
+        }
     }
 }

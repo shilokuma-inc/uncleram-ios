@@ -23,6 +23,8 @@ final class UncleRAMUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments += ["-hasAcknowledgedSafetyNotice", acknowledgedSafetyNotice ? "YES" : "NO"]
         app.launchArguments += ["-tapToDonate", tapToDonate ? "YES" : "NO"]
+        // Game Center のサインインの画面が出ると流れが止まるので、UI テストでは始めない
+        app.launchArguments += ["-disableGameCenter", "YES"]
         if let completedFirstRound {
             // デイリーの欄を出すかどうかと、今日のデイリーの記録（文字を渡すとデータとして読めず、記録なしになる）
             app.launchArguments += ["-hasCompletedFirstRound", completedFirstRound ? "YES" : "NO", "-dailyRecord.v1", "none"]
@@ -128,6 +130,19 @@ final class UncleRAMUITests: XCTestCase {
         backToTitle.tap()
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH '本日は献上済み'")).firstMatch.waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["挑戦する"].exists)
+    }
+
+    /// タイトルの「ランキング」でランキングが開き、サインインしていなくても自分の最高記録が見られる
+    @MainActor
+    func testRankingOpensWithPersonalBests() throws {
+        let app = launch()
+
+        let ranking = app.buttons["ランキング"]
+        XCTAssertTrue(ranking.waitForExistence(timeout: 5))
+        ranking.tap()
+        XCTAssertTrue(app.staticTexts["自分の最高記録"].waitForExistence(timeout: 5))
+        app.buttons["閉じる"].tap()
+        XCTAssertTrue(app.buttons["献上をはじめる"].waitForExistence(timeout: 5))
     }
 
     /// タイトルの「?」で遊び方の 3 コマが開き、「閉じる」（×）で閉じる
