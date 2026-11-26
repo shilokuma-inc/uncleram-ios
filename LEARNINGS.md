@@ -22,7 +22,7 @@
 
 - Xcode 26 の GameKit バンドル（`.gamekit`）は、中の `gameCenterResources.json`（`meta.version` は `2024-11-15`）だけで読める。書き方は Apple の公式サンプル（apple/unityplugins の `Apple.GameKit.Sample/GameCenterResources.gamekit`）が参考になる。繰り返し型は `recurrenceStartDate`（UTC の ISO 8601）・`recurrenceDuration`（例 `P1D`）・`recurrenceRule`（例 `FREQ=DAILY;INTERVAL=1`）、スコアの範囲は文字列（`"0"`・`"300"`）（2026-11-24）
 - 同期フォルダ（`PBXFileSystemSynchronizedRootGroup`）に置いた `.gamekit` は、xcodebuild ではフォルダとして扱われ、中の JSON がアプリの直下にコピーされる。動きには影響しない。Xcode で作られたほかのプロジェクトでも、同期フォルダの中に置いてターゲットに入れている（2026-11-24）
-- Mac でアドホック署名（`CODE_SIGN_IDENTITY=-`・`CODE_SIGN_STYLE=Manual`・プロファイルなし）すると、`com.apple.developer.game-center` の権限があるだけで「requires a provisioning profile」でビルドが止まる。CI の Mac のテストとアーカイブはアドホック署名なので、権限は今は iOS だけ（`CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]`・`[sdk=iphonesimulator*]`）に付けている（2026-11-24）
+- Mac でアドホック署名（`CODE_SIGN_IDENTITY=-`・`CODE_SIGN_STYLE=Manual`・プロファイルなし）すると、`com.apple.developer.game-center` の権限があるだけで「requires a provisioning profile」でビルドが止まる。CI の Mac のテストとアーカイブはアドホック署名なので、権限は iOS だけ（`CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]`・`[sdk=iphonesimulator*]`）に付け、Mac はアーカイブのあとで `codesign -d --entitlements - --xml` で今の権限を取り出し、`PlistBuddy -c "Merge UncleRAM/UncleRAM.entitlements"` で足して、`codesign --force --sign - --entitlements … --preserve-metadata=identifier,flags,runtime` で署名し直す（codesign そのものはプロファイルを確かめない）。Export はこの権限を引き継ぐ（2026-11-26）
 - 「Push to App Store Connect」をすると、Xcode が `gameCenterResources.json` を自分の書き方（キーの並び・`/` を `\/` にする）で書き直す。中身は変わらない。差分が出ないよう、リポジトリの JSON は Xcode の書き方にそろえてある。手で直したあとに Push すると、また書き直されるので、Push のあとの差分もコミットする（2026-11-26）
 
 ## 音
