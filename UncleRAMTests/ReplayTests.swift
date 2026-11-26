@@ -311,15 +311,21 @@ extension ReplayTests {
         // 書体や絵を読み込む最初の 1 回の分は除いて量る（1 コマ描いておく）
         let timeline = ReplayTimeline(script: script)
         _ = ReplayVideoMaker.render(timeline.frame(at: 30), script: script, speed: timeline.speed, content: content)
-        // 描いた絵は、描くたびに手放す（全部のコマを描いても、コマの数には比例しない。Mac は描くときの絵の置き場で +80MB ほど、iOS Simulator は +10MB ほど）
+        // 描いた絵は、描くたびに手放す。全部のコマを 2 回描いても、2 回目は 1 回目より増えない（コマを持ち続けると、2 回目に 1.2GB 増える）。
+        // 1 回目に増える分は描くときの絵の置き場で、環境で大きく違う（Mac +80MB、iOS Simulator +10MB、CI の Mac の仮想マシン +470MB）
         let renderBefore = ProcessMemory.footprintBytes() ?? 0
-        var renderPeak = renderBefore
-        for index in 0..<timeline.frameCount {
-            _ = ReplayVideoMaker.render(timeline.frame(at: index), script: script, speed: timeline.speed, content: content)
-            renderPeak = max(renderPeak, ProcessMemory.footprintBytes() ?? 0)
+        var renderPeaks: [UInt64] = []
+        for _ in 0..<2 {
+            var peak = renderBefore
+            for index in 0..<timeline.frameCount {
+                _ = ReplayVideoMaker.render(timeline.frame(at: index), script: script, speed: timeline.speed, content: content)
+                peak = max(peak, ProcessMemory.footprintBytes() ?? 0)
+            }
+            renderPeaks.append(peak)
         }
-        let renderGrowth = Double(renderPeak > renderBefore ? renderPeak - renderBefore : 0) / Double(Self.megabyte)
-        #expect(renderGrowth < 200)
+        let renderGrowth = Double(renderPeaks[0] > renderBefore ? renderPeaks[0] - renderBefore : 0) / Double(Self.megabyte)
+        let secondPass = Double(renderPeaks[1] > renderPeaks[0] ? renderPeaks[1] - renderPeaks[0] : 0) / Double(Self.megabyte)
+        #expect(secondPass < 64)
         let before = ProcessMemory.footprintBytes() ?? 0
         var peak = before
         let video = try await ReplayVideoMaker.make(script: script, content: content, to: url) { _ in
@@ -340,7 +346,8 @@ extension ReplayTests {
         // 係が 40 コマほどを中に持ち、+410MB ほどで頭打ちになる（描くだけなら +10MB。実機は Mac と同じくハードウェアで符号化する）
         let growth = Double(peak > before ? peak - before : 0) / Double(Self.megabyte)
         let remaining = Double(after > before ? after - before : 0) / Double(Self.megabyte)
-        print("replay: render +\(Int(renderGrowth)) MB, export +\(Int(growth)) MB (+\(Int(remaining)) MB after)")
+        print("replay: render +\(Int(renderGrowth)) MB (again +\(Int(secondPass)) MB), export +\(Int(growth)) MB")
+        print("replay: +\(Int(remaining)) MB after the export")
         #if targetEnvironment(simulator)
         #expect(growth < 600)
         #else
