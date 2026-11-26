@@ -191,6 +191,21 @@ jobs:
               CODE_SIGNING_ALLOWED=NO
           fi
 
+      - name: Add Game Center entitlement to macOS app
+        # Game Center の権限（com.apple.developer.game-center）はプロビジョニングプロファイルが要るので、アドホック署名のアーカイブでは
+        # Xcode が「requires a provisioning profile」で止まる。そこで権限は iOS にだけ付けてアーカイブし（CODE_SIGN_ENTITLEMENTS[sdk=iphone*]）、
+        # macOS はアーカイブのあとで、今の権限（App Sandbox など）に UncleRAM/UncleRAM.entitlements を足してアドホック署名し直す。
+        # 配布用の署名は Export がし、権限はこの署名から引き継がれる（App Store のプロファイルは Game Center を含む）
+        if: ${{ inputs.platform == 'macOS' }}
+        run: |
+          app_path=$(/usr/libexec/PlistBuddy -c 'Print :ApplicationProperties:ApplicationPath' "$RUNNER_TEMP/build.xcarchive/Info.plist")
+          app="$RUNNER_TEMP/build.xcarchive/Products/$app_path"
+          entitlements="$RUNNER_TEMP/macos-entitlements.plist"
+          codesign -d --entitlements - --xml "$app" > "$entitlements" 2>/dev/null
+          /usr/libexec/PlistBuddy -c "Merge UncleRAM/UncleRAM.entitlements" "$entitlements"
+          codesign --force --sign - --entitlements "$entitlements" --preserve-metadata=identifier,flags,runtime "$app"
+          codesign -d --entitlements - --xml "$app" 2>/dev/null | plutil -p -
+
       - name: Fix signatures of stub frameworks
         # 静的な xcframework（Firebase・Google Mobile Ads など）は、同梱するときに Xcode がバイナリを外して空のスタブを差し込む（Injecting stub binary into codeless framework）。
         # スタブはリンカーの仮の署名のままで識別子が `arm64-apple` になっていて、署名なしの Archive では Xcode の署名で直らない。
@@ -255,7 +270,7 @@ jobs:
           path: ${{ runner.temp }}/export/*.${{ env.PACKAGE_EXTENSION }}
           if-no-files-found: error
 
-      - name: Check App Sandbox in pkg
+      - name: Check App Sandbox and Game Center in pkg
         # Mac App Store は App Sandbox を必須にしている。archive の署名から entitlement が落ちると、アップロード後の処理で弾かれて
         # 原因が分かりにくいので、Export した pkg の .app に sandbox の entitlement が残ったかを、アップロードの前に確かめる
         if: ${{ inputs.platform == 'macOS' }}
@@ -276,6 +291,12 @@ jobs:
             exit 1
           fi
           echo "$(basename "$app") の App Sandbox は有効です"
+          if [[ "$(/usr/libexec/PlistBuddy -c 'Print :com.apple.developer.game-center' "$work/entitlements.plist" 2>/dev/null)" != true ]]; then
+            echo "::error::Export した pkg の $(basename "$app") に Game Center の entitlement がありません"
+            cat "$work/entitlements.plist"
+            exit 1
+          fi
+          echo "$(basename "$app") の Game Center の entitlement は有効です"
 
       - name: Check app exists in App Store Connect
         # App Store Connect にアプリが無いと、アップロードが "Error Downloading App Information" で失敗し原因が分かりにくい。
