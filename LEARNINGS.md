@@ -18,6 +18,8 @@
 
 - シェア画像（献上明細書）を目で確かめるときは、`TEST_RUNNER_UNCLERAM_SHARE_IMAGE_DIR=<リポジトリの外のフォルダ>` を付けて `-only-testing:UncleRAMTests/ShareTests` を流す。xcodebuild は `TEST_RUNNER_` を外した名前でテストに環境変数を渡すので、4:5 と 9:16 の PNG（納品と回収）がそのフォルダに書き出される。Mac と iOS Simulator のどちらでも書き出せる（2026-11-26）
 
+- リプレイ動画を目で確かめるときは、`TEST_RUNNER_UNCLERAM_REPLAY_VIDEO_DIR=<リポジトリの外のフォルダ>` を付けて `-only-testing:UncleRAMTests/ReplayTests` を流す。速達便の納品・回収とデイリーの回収の mp4（約 10 秒）と、何コマかの PNG（AVAssetImageGenerator で取り出したもの）が書き出される。Swift Testing の 1 つのテストだけを流すときは `-only-testing:'UncleRAMTests/ReplayTests/exportedVideoHasExpectedFormat()'` のように `()` まで付ける（付けないと 0 件で成功になる）（2026-11-26）
+
 - CI の Build は、作業ブランチへの push では Unit テストだけを流し、PR では iOS Simulator の UI テストまで流す。画面の流れを変えたら、手元で `-only-testing:UncleRAMUITests/UncleRAMUITests` を流しておく。UI テストは起動引数 `-hasAcknowledgedSafetyNotice YES`（UserDefaults の引数のドメイン）で、初回の案内を飛ばしている（2026-11-26）
 
 ## Game Center
@@ -34,6 +36,11 @@
 - afconvert で作った AAC（`.m4a`）は、エンコーダーの頭の遅れ（priming 2112 フレーム）と終わりの余り（remainder）を持つ。AVAudioFile でデコードすると元の長さとフレーム数まで一致し、AVAudioPlayer の `numberOfLoops = -1` でも継ぎ目が出ない。ループさせる音（BGM を含む）も AAC でよい。`afinfo` の「valid frames + priming + remainder」で確かめられる（2026-11-26）
 - AVAudioPlayer の `play(atTime:)` で遅らせて鳴らす予定は、鳴る前に `stop()` すれば取り消せる（2026-11-26、macOS で確かめた）
 - Freesound の音は、元のファイルを取るにはログイン（API なら OAuth）が要るが、試聴用の MP3（`https://cdn.freesound.org/previews/<ID の上 3 桁>/<ID>_<作者の ID>-hq.mp3`、128kbps）はログインなしで取れる。URL は音のページに書いてある。検索は `https://freesound.org/search/?q=<語>&f=license:"Creative Commons 0"` で CC0 に絞れるが、ライセンスは音ごとのページ（`creativecommons.org/publicdomain/zero/1.0/` へのリンク）でも確かめる（2026-11-26）
+
+## 動画
+
+- AVAssetWriter に絵と音の 2 つの入力を足して `expectsMediaDataInRealTime = false` で書くとき、音を「絵の時刻 + 0.5 秒」までしか書かないと、絵の入力が受け取れないまま止まった（書き手は自分の区切りで交互に並べるので、もっと先の音を待つ）。絵を受け取れないときは、音を 1 回分ずつ先に書いてから見直す（`ReplayVideoEncoder`）（2026-11-26）
+- 1080×1920 の SwiftUI を ImageRenderer で 1 コマずつ描くと、Mac では 1 コマ 5〜10ms で、10 秒の動画が 1.5 秒ほどで書き出せた。書き出しの間は使用量が 130MB ほど増えるが、多くは描くときの絵の置き場（footprint の graphics）で、終わって数秒で戻る。`render(rasterizationScale:)` で自分の CGContext に描くと（CPU で描く）3 倍遅く、増え方もあまり変わらなかった（2026-11-26）
 
 ## 仕様と試算
 
