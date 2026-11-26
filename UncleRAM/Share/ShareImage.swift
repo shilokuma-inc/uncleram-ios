@@ -42,6 +42,8 @@ nonisolated enum ShareImageFormat: String, CaseIterable, Sendable, Identifiable 
 struct ShareImageCanvas: View {
     let format: ShareImageFormat
     let content: TributeStatementContent
+    /// 紙の背景を敷くか。リプレイ動画の最後（`ReplayEndCard`）は、縮めて下に「#UncleRAM」を置くので、背景を外に敷く
+    var showsPaper = true
 
     var body: some View {
         VStack(spacing: format == .story ? 16 : 12) {
@@ -68,7 +70,11 @@ struct ShareImageCanvas: View {
         .padding(.top, format == .story ? 24 : 22)
         .padding(.bottom, format == .story ? 24 : 16)
         .frame(width: format.canvasSize.width, height: format.canvasSize.height)
-        .background { PaperBackground() }
+        .background {
+            if showsPaper {
+                PaperBackground()
+            }
+        }
         .clipped()
         .foregroundStyle(Theme.navy)
         // 画像は固定のレイアウトにする。文字の大きさの設定で、プレビューと書き出した画像がずれないように
