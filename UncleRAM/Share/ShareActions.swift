@@ -35,7 +35,7 @@ enum SharePasteboard {
 }
 
 #if os(iOS)
-/// iPhone・iPad の「画像を保存」。写真への追加だけの許可（NSPhotoLibraryAddUsageDescription）で、写真ライブラリに書き足す。
+/// iPhone・iPad の「画像を保存」「動画を保存」。写真への追加だけの許可（NSPhotoLibraryAddUsageDescription）で、写真ライブラリに書き足す。
 /// 写真を読む許可は求めない
 nonisolated enum PhotoLibrarySaver {
     enum Failure: Error {
@@ -51,6 +51,17 @@ nonisolated enum PhotoLibrarySaver {
         // 変更の処理は写真ライブラリの裏のキューで呼ばれるので、MainActor の外（nonisolated）で作る
         try await PHPhotoLibrary.shared().performChanges {
             PHAssetCreationRequest.forAsset().addResource(with: .photo, data: pngData, options: nil)
+        }
+    }
+
+    /// 「動画を保存」。ファイルは写真ライブラリに写す（元のファイルは、共有のプレビューを閉じたときに消す）
+    static func save(videoAt url: URL) async throws {
+        let status = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
+        guard status == .authorized || status == .limited else {
+            throw Failure.denied
+        }
+        try await PHPhotoLibrary.shared().performChanges {
+            PHAssetCreationRequest.forAsset().addResource(with: .video, fileURL: url, options: nil)
         }
     }
 }
