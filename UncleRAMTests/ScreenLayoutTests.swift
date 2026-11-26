@@ -1,5 +1,8 @@
 import CoreGraphics
 import Testing
+#if os(iOS)
+import UIKit
+#endif
 @testable import UncleRAM
 
 /// 画面の組み方（横長のレイアウトか、iPhone のレイアウトか）と拡大率
@@ -9,17 +12,27 @@ struct ScreenLayoutTests {
     /// iPhone は、大きい機種でも iPhone のレイアウトを拡大しない
     @Test(arguments: [CGSize(width: 375, height: 647), CGSize(width: 402, height: 778), CGSize(width: 440, height: 868)])
     func iPhoneIsCompactWithoutScaling(size: CGSize) {
-        let layout = ScreenLayout(size: size)
+        for scales in [false, true] {
+            let layout = ScreenLayout(size: size, scales: scales)
+            #expect(!layout.isWide)
+            #expect(layout.scale == 1)
+        }
+    }
+
+    /// iPad でなければ（iPhone の Simulator で流したときなど）、iPad の大きさでも拡大しない
+    @Test func scalingIsOnlyForIPad() {
+        let layout = ScreenLayout(size: CGSize(width: 1032, height: 1332), scales: false)
         #expect(!layout.isWide)
         #expect(layout.scale == 1)
+        #expect(ScreenLayout.scalesLayout == (UIDevice.current.userInterfaceIdiom == .pad))
     }
 
     /// iPad の縦向きは、幅が 960 を越えても（13 インチ）iPhone のレイアウトにし、画面の高さに合わせて拡大する
     @Test func iPadPortraitIsScaledCompact() {
-        let large = ScreenLayout(size: CGSize(width: 1032, height: 1332))
+        let large = ScreenLayout(size: CGSize(width: 1032, height: 1332), scales: true)
         #expect(!large.isWide)
         #expect(abs(large.scale - 1332.0 / 880) < 0.001)
-        let small = ScreenLayout(size: CGSize(width: 834, height: 1166))
+        let small = ScreenLayout(size: CGSize(width: 834, height: 1166), scales: true)
         #expect(!small.isWide)
         #expect(abs(small.scale - 1166.0 / 880) < 0.001)
         // 拡大する前の大きさは、iPhone の大きい機種ほどの高さになる
@@ -28,16 +41,16 @@ struct ScreenLayoutTests {
 
     /// タイトルは中身が高いので、拡大する前に取る高さを大きくして、拡大を控えめにする
     @Test func titleUsesTallerReference() {
-        let layout = ScreenLayout(size: CGSize(width: 1032, height: 1332), compactReferenceHeight: 1_000)
+        let layout = ScreenLayout(size: CGSize(width: 1032, height: 1332), compactReferenceHeight: 1_000, scales: true)
         #expect(abs(layout.scale - 1.332) < 0.001)
     }
 
     /// iPad の横向きは横長のレイアウトにし、Mac のデザイン（1200 × 760）より大きい画面では拡大する
     @Test func iPadLandscapeIsWide() {
-        let large = ScreenLayout(size: CGSize(width: 1376, height: 988))
+        let large = ScreenLayout(size: CGSize(width: 1376, height: 988), scales: true)
         #expect(large.isWide)
         #expect(abs(large.scale - 1376.0 / 1200) < 0.001)
-        let small = ScreenLayout(size: CGSize(width: 1210, height: 790))
+        let small = ScreenLayout(size: CGSize(width: 1210, height: 790), scales: true)
         #expect(small.isWide)
         #expect(abs(small.scale - 1210.0 / 1200) < 0.001)
     }
@@ -45,7 +58,7 @@ struct ScreenLayoutTests {
     /// Split View などで幅が狭いときは、iPhone のレイアウトにする（高さがあっても、幅に合わせて拡大は控える）
     @Test(arguments: [CGSize(width: 320, height: 1166), CGSize(width: 678, height: 988), CGSize(width: 940, height: 700)])
     func narrowWindowIsCompact(size: CGSize) {
-        let layout = ScreenLayout(size: size)
+        let layout = ScreenLayout(size: size, scales: true)
         #expect(!layout.isWide)
         #expect(layout.scale >= 1)
         #expect(layout.scale <= max(1, size.width / ScreenLayout.compactReferenceSize.width))
@@ -53,7 +66,7 @@ struct ScreenLayoutTests {
     #endif
 
     #if os(macOS)
-    /// Mac はいつも横長のレイアウトで、ウィンドウを広げても、縦長にしても拡大しない
+    /// Mac はいつも横長のレイアウトで、ウィンドウを広げても、縦長にしても拡大しない（`scalesLayout` は false）
     @Test(arguments: [
         CGSize(width: 1000, height: 612),
         CGSize(width: 1200, height: 732),
@@ -64,6 +77,7 @@ struct ScreenLayoutTests {
         let layout = ScreenLayout(size: size)
         #expect(layout.isWide)
         #expect(layout.scale == 1)
+        #expect(!ScreenLayout.scalesLayout)
     }
     #endif
 

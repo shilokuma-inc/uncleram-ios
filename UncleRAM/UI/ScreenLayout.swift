@@ -5,8 +5,17 @@ import SwiftUI
 /// 横幅が広いときは横長のレイアウトにする（2026-11-12 にユーザーが決定）。iPad の縦向きのような縦長の画面は、幅が広くても
 /// iPhone のレイアウトにする（2026-11-26。横長のレイアウトでは下が空くため）。
 /// iPad では、どちらのレイアウトも、デザインより大きい画面では画面の大きさに合わせて拡大する（iPhone のレイアウトのままでは小さく見えるため）。
-/// Mac はウィンドウの最小幅が 1000 なので、いつも横長のレイアウトになり、ウィンドウを広げても拡大しない（広げた分は中央の列が伸びる）
+/// iPhone は拡大しない。Mac はウィンドウの最小幅が 1000 なので、いつも横長のレイアウトになり、ウィンドウを広げても拡大しない（広げた分は中央の列が伸びる）
 struct ScreenLayout: Equatable {
+    /// 画面の大きさに合わせて拡大する端末か（iPad だけ）。起動している間は変わらない
+    static let scalesLayout: Bool = {
+        #if os(iOS)
+        UIDevice.current.userInterfaceIdiom == .pad
+        #else
+        false
+        #endif
+    }()
+
     /// これより広く、縦長でないときは、横長のレイアウトにする（Mac のデザインの最小幅 1000 に近い値）
     static let wideMinimumWidth: CGFloat = 960
     /// iPhone のレイアウトを拡大するとき、拡大する前に取る大きさ。中身の最大幅（480）に左右の余白を足した幅と、
@@ -25,15 +34,15 @@ struct ScreenLayout: Equatable {
     /// - Parameters:
     ///   - size: 画面（ウィンドウ）の、安全な領域の大きさ
     ///   - compactReferenceHeight: iPhone のレイアウトを拡大する前に取る高さ。中身が高い画面（タイトル）は大きくする
-    init(size: CGSize, compactReferenceHeight: CGFloat = Self.compactReferenceSize.height) {
+    ///   - scales: 拡大するか。テストで iPad の決まりを確かめるとき以外は、`scalesLayout` のまま
+    init(size: CGSize, compactReferenceHeight: CGFloat = Self.compactReferenceSize.height, scales: Bool = Self.scalesLayout) {
         #if os(macOS)
         isWide = size.width >= Self.wideMinimumWidth
-        scale = 1
         #else
         isWide = size.width >= Self.wideMinimumWidth && size.width >= size.height
-        let reference = isWide ? Self.wideReferenceSize : CGSize(width: Self.compactReferenceSize.width, height: compactReferenceHeight)
-        scale = Self.scale(fitting: reference, in: size)
         #endif
+        let reference = isWide ? Self.wideReferenceSize : CGSize(width: Self.compactReferenceSize.width, height: compactReferenceHeight)
+        scale = scales ? Self.scale(fitting: reference, in: size) : 1
     }
 
     /// `reference` の大きさで組んだものを、`size` に収まるだけ拡大する倍率（1 から `maximumScale` まで）
@@ -53,11 +62,18 @@ struct ScreenLayout: Equatable {
 
 extension View {
     /// 拡大する前の大きさ（`ScreenLayout.layoutSize(in:)`）で組んでから、`size` いっぱいに拡大する。
-    /// 拡大率が 1 のときも同じ形で包む（Split View で幅を変えたときに、画面の状態が作り直されないように）
+    ///
+    /// iPad では、拡大率が 1 のときも同じ形で包む（Split View で幅を変えたときに、画面の状態が作り直されないように）。
+    /// iPhone と Mac は拡大しないので包まない（`scaleEffect` があると、スクロールした直後に UI テストがボタンの位置を取れないことがあった）
+    @ViewBuilder
     func scaledToLayout(_ layout: ScreenLayout, in size: CGSize) -> some View {
-        let layoutSize = layout.layoutSize(in: size)
-        return frame(width: layoutSize.width, height: layoutSize.height)
-            .scaleEffect(layout.scale)
-            .frame(width: size.width, height: size.height)
+        if ScreenLayout.scalesLayout {
+            let layoutSize = layout.layoutSize(in: size)
+            frame(width: layoutSize.width, height: layoutSize.height)
+                .scaleEffect(layout.scale)
+                .frame(width: size.width, height: size.height)
+        } else {
+            self
+        }
     }
 }
