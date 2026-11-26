@@ -180,24 +180,27 @@ extension View {
     func shareVideoLifecycle(
         export: ShareVideoExport,
         isSelected: Bool,
+        isAvailable: Bool,
         key: String,
         start: @escaping () -> Void
     ) -> some View {
-        modifier(ShareVideoLifecycle(export: export, isSelected: isSelected, key: key, start: start))
+        modifier(ShareVideoLifecycle(export: export, isSelected: isSelected, isAvailable: isAvailable, key: key, start: start))
     }
 }
 
 private struct ShareVideoLifecycle: ViewModifier {
     let export: ShareVideoExport
     let isSelected: Bool
+    /// 記録があるか（結果が出た直後に開いたときは、記録が届くのが少し後になる）
+    let isAvailable: Bool
     let key: String
     let start: () -> Void
     @Environment(\.scenePhase) private var scenePhase
 
     func body(content: Content) -> some View {
         content
-            .onChange(of: isSelected, initial: true) { _, selected in
-                if selected, export.state == .idle {
+            .onChange(of: isSelected && isAvailable, initial: true) { _, ready in
+                if ready, export.state == .idle {
                     start()
                 }
             }

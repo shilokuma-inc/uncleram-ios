@@ -82,7 +82,7 @@ struct SharePreviewScreen: View {
             // 機種名を隠したら、機種名の入った文面を残さないよう、編集した文面も作り直す
             editedCaption = nil
         }
-        .shareVideoLifecycle(export: video, isSelected: tab == .video, key: deviceText, start: startVideo)
+        .shareVideoLifecycle(export: video, isSelected: tab == .video, isAvailable: replay != nil, key: deviceText, start: startVideo)
         #if os(macOS)
         .frame(minWidth: 900, idealWidth: 980, minHeight: 600, idealHeight: 700)
         .fileExporter(
