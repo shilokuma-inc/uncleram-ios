@@ -1,11 +1,8 @@
 import SwiftUI
 
-/// 速達便のラウンド画面と結果。横幅で、iPhone のレイアウトと Mac の横長のレイアウトを切り替える
-/// （iPad は広いときは横長、Split View などで狭いときは iPhone のレイアウト。2026-11-12 にユーザーが決定）。
+/// 速達便のラウンド画面と結果。`ScreenLayout` で、iPhone のレイアウトと Mac の横長のレイアウトを切り替える
+/// （iPad は広い横向きは横長、縦向きと Split View などの狭い幅は iPhone のレイアウト）
 struct RoundScreen: View {
-    /// これより広いときは横長のレイアウトにする（Mac のデザインの最小幅 1000 に近い値）
-    static let wideLayoutMinimumWidth: CGFloat = 960
-
     @State private var engine: RoundEngine
     @State private var monitor: RoundEventMonitor
     @State private var bench: BenchRunner
@@ -39,16 +36,18 @@ struct RoundScreen: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let wide = proxy.size.width >= Self.wideLayoutMinimumWidth
+            let layout = ScreenLayout(size: proxy.size)
             ZStack {
-                PaperBackground(wide: wide)
-                content(wide: wide, size: proxy.size)
+                PaperBackground(wide: layout.isWide)
+                // iPad では、画面の大きさに合わせて拡大する（`ScreenLayout`）
+                content(wide: layout.isWide, size: layout.layoutSize(in: proxy.size))
+                    .scaledToLayout(layout, in: proxy.size)
                 if engine.hintStage == .warning, engine.phase == .donating {
                     // 練習ラウンドでは兆しを大きく出す（ノイズを濃くする）
                     InkNoise(intensity: engine.plan?.isPractice == true ? 1.6 : 1).ignoresSafeArea()
                 }
                 if showsHowToPlay {
-                    HowToPlayOverlay(wide: wide) { showsHowToPlay = false }
+                    HowToPlayOverlay(layout: layout, size: proxy.size) { showsHowToPlay = false }
                         .transition(.opacity)
                 }
             }

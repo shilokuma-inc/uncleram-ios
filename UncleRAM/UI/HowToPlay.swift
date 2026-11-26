@@ -3,9 +3,15 @@ import SwiftUI
 /// 「?」から開く、絵だけの遊び方の 3 コマ（押す → 兆しを見る → 離す）。iPhone は docs/design/Help.png、Mac は MacHelp.png。
 /// 読まなくても遊べる前提なので、強制しない（docs/SPEC.md「説明なしで分かる UI」の「いつでも見られる説明」）
 struct HowToPlayOverlay: View {
-    /// Mac と広い iPad では 3 コマを横に並べる
-    let wide: Bool
+    /// 下の画面の組み方。Mac と広い iPad では 3 コマを横に並べる。iPad では下の画面と同じだけ拡大する
+    let layout: ScreenLayout
+    /// 下の画面の大きさ
+    let size: CGSize
     let onClose: () -> Void
+
+    private var wide: Bool {
+        layout.isWide
+    }
 
     var body: some View {
         ZStack {
@@ -22,6 +28,7 @@ struct HowToPlayOverlay: View {
             }
             .scrollBounceBehavior(.basedOnSize)
             .defaultScrollAnchor(.center)
+            .scaledToLayout(layout, in: size)
         }
         .accessibilityAddTraits(.isModal)
     }

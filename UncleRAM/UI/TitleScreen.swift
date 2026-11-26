@@ -11,37 +11,46 @@ struct TitleScreen: View {
     /// 「?」から開く遊び方の 3 コマ。撮影モードの howToPlay では開いた状態で始める
     @State private var showsHowToPlay = ScreenshotDemo.scene == .howToPlay
 
+    /// iPad の縦向きで iPhone のレイアウトを拡大するとき、拡大する前に取る高さ。
+    /// ラウンドの画面（880）より高くして、デイリーの欄と下の注記まで 1 画面に収める（デイリーの欄があるときの iPhone のレイアウトは約 950）
+    private static let compactReferenceHeight: CGFloat = 1_000
+
     var body: some View {
         GeometryReader { proxy in
-            let wide = proxy.size.width >= RoundScreen.wideLayoutMinimumWidth
+            // iPad では、画面の大きさに合わせて拡大する（`ScreenLayout`）
+            let layout = ScreenLayout(size: proxy.size, compactReferenceHeight: Self.compactReferenceHeight)
+            let layoutSize = layout.layoutSize(in: proxy.size)
             ZStack {
-                PaperBackground(wide: wide)
-                if wide {
-                    WideTitleLayout(
-                        onStartExpress: onStartExpress,
-                        onStartDaily: onStartDaily,
-                        onOpenSettings: onOpenSettings,
-                        onOpenRanking: onOpenRanking
-                    ) {
-                        showsHowToPlay = true
-                    }
-                } else {
-                    // 低い画面や、文字を大きくしたとき（Dynamic Type）は縦に送れるようにする。収まるときは下の注記を画面の下に寄せる
-                    ScrollView {
-                        CompactTitleLayout(
-                            height: proxy.size.height,
+                PaperBackground(wide: layout.isWide)
+                Group {
+                    if layout.isWide {
+                        WideTitleLayout(
                             onStartExpress: onStartExpress,
                             onStartDaily: onStartDaily,
                             onOpenSettings: onOpenSettings,
                             onOpenRanking: onOpenRanking
-                        ) { showsHowToPlay = true }
-                            .frame(maxWidth: 480)
-                            .frame(maxWidth: .infinity, minHeight: proxy.size.height)
+                        ) {
+                            showsHowToPlay = true
+                        }
+                    } else {
+                        // 低い画面や、文字を大きくしたとき（Dynamic Type）は縦に送れるようにする。収まるときは下の注記を画面の下に寄せる
+                        ScrollView {
+                            CompactTitleLayout(
+                                height: layoutSize.height,
+                                onStartExpress: onStartExpress,
+                                onStartDaily: onStartDaily,
+                                onOpenSettings: onOpenSettings,
+                                onOpenRanking: onOpenRanking
+                            ) { showsHowToPlay = true }
+                                .frame(maxWidth: 480)
+                                .frame(maxWidth: .infinity, minHeight: layoutSize.height)
+                        }
+                        .scrollBounceBehavior(.basedOnSize)
                     }
-                    .scrollBounceBehavior(.basedOnSize)
                 }
+                .scaledToLayout(layout, in: proxy.size)
                 if showsHowToPlay {
-                    HowToPlayOverlay(wide: wide) { showsHowToPlay = false }
+                    HowToPlayOverlay(layout: layout, size: proxy.size) { showsHowToPlay = false }
                         .transition(.opacity)
                 }
             }
