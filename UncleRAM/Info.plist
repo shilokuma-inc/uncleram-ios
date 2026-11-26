@@ -16,7 +16,7 @@
 		<string>DelaGothicOne-Regular.ttf</string>
 	</array>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>アロケート社 経理部が発行した献上明細書を、写真に保存するために使います。</string>
+	<string>アロケート社 経理部が発行した献上明細書と、ラウンドのリプレイ動画を、写真に保存するために使います。</string>
 	<key>NSRequiresAquaSystemAppearance</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>

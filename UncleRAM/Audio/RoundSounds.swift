@@ -12,14 +12,14 @@ import Foundation
 /// 回収飛行船が大きくなり、ヒントの欄が「回収飛行船 接近」になる
 final class RoundSounds {
     /// プロペラの大きさ（`SoundEffect.mixLevel` に対する割合）
-    static let approachLevel: Float = 0.6
-    static let warningLevel: Float = 1
+    nonisolated static let approachLevel: Float = 0.6
+    nonisolated static let warningLevel: Float = 1
     /// 接近で、無音からこの秒数をかけて大きくする（近づいてくるように）。接近から回収まではおよそ 1〜2 秒
-    static let approachFadeIn: TimeInterval = 1.2
+    nonisolated static let approachFadeIn: TimeInterval = 1.2
     /// 警告で、この秒数をかけてもう少し大きくする
-    static let warningFade: TimeInterval = 0.3
+    nonisolated static let warningFade: TimeInterval = 0.3
     /// 離したときに、この秒数で小さくして止める（ぶつりと切れないように）
-    static let propellerFadeOut: TimeInterval = 0.15
+    nonisolated static let propellerFadeOut: TimeInterval = 0.15
 
     private let player: any SoundPlaying
     private let isSilenced: () -> Bool

@@ -2,11 +2,12 @@ import SwiftUI
 
 /// 共有のプレビュー（docs/SPEC.md「共有機能」の「共有の入口」、docs/design/MacResult.png の「明細書をシェア」の列）。
 ///
-/// 画像（4:5 / 9:16）と文字を切り替えて、共有シート（`ShareLink`）から本人が投稿する。自動投稿や、共有と引き換えの報酬は置かない。
-/// 「画像を保存」と「文字をコピー」も置き、Mac は画像をクリップボードにもコピーできる。動画は別の PR で足す
+/// 画像（4:5 / 9:16）・動画（リプレイ）・文字を切り替えて、共有シート（`ShareLink`）から本人が投稿する。自動投稿や、共有と引き換えの報酬は置かない。
+/// 「画像を保存」「動画を保存」と「文字をコピー」も置き、Mac は画像をクリップボードにもコピーできる
 struct SharePreviewScreen: View {
     enum Tab {
         case image
+        case video
         case text
     }
 
@@ -34,6 +35,10 @@ struct SharePreviewScreen: View {
     @State private var exportsImage = false
     #endif
     @State private var device = ShareDeviceLabel.current
+    /// リプレイ動画を作って持っておく係
+    @State private var video = ShareVideoExport()
+    /// この結果のリプレイ（RoundScreen が入れる）。記録の無い結果は nil
+    @Environment(\.roundReplay) private var replay
     private let price = MacUpgradePrice.current
 
     private static var isMac: Bool {
@@ -77,6 +82,7 @@ struct SharePreviewScreen: View {
             // 機種名を隠したら、機種名の入った文面を残さないよう、編集した文面も作り直す
             editedCaption = nil
         }
+        .shareVideoLifecycle(export: video, isSelected: tab == .video, isAvailable: replay != nil, key: deviceText, start: startVideo)
         #if os(macOS)
         .frame(minWidth: 900, idealWidth: 980, minHeight: 600, idealHeight: 700)
         .fileExporter(
@@ -158,31 +164,29 @@ struct SharePreviewScreen: View {
         }
     }
 
+    /// リプレイ動画に描いてよいもの（デイリーは回収ラインの位置を割り出せるものを持たない）
+    private var videoScript: ReplayScript? {
+        replay.map { ReplayScript(replay: $0, mode: summary.mode) }
+    }
+
+    private func startVideo() {
+        guard let videoScript else {
+            return
+        }
+        video.start(script: videoScript, content: content, key: deviceText)
+    }
+
     // MARK: - レイアウト
 
     private func compactLayout(width: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             header
             tabBar
-            switch tab {
-            case .image:
-                CanvasPreview(
-                    format: format,
-                    content: content,
-                    maxWidth: max(0, min(width, 560) - 40),
-                    maxHeight: format == .story ? 560 : .infinity
-                )
-                .frame(maxWidth: .infinity)
-                options(showsFormat: true)
-                captionEditor
-                imageShareButton
-                imageActions
-            case .text:
-                textPreview
-                options(showsFormat: false)
-                textShareButton
-                RuleButton(title: "文字をコピー", action: copyText)
+            if tab != .text {
+                preview(maxWidth: max(0, min(width, 560) - 40), maxHeight: tab == .video || format == .story ? 560 : .infinity)
+                    .frame(maxWidth: .infinity)
             }
+            controls
             footnotes
         }
         .padding(.horizontal, 20)
@@ -193,28 +197,48 @@ struct SharePreviewScreen: View {
 
     private func wideLayout(height: CGFloat) -> some View {
         HStack(alignment: .top, spacing: 40) {
-            CanvasPreview(format: format, content: content, maxWidth: 460, maxHeight: max(320, height - 56))
+            // 文字のときは、画像の明細書を見本に出しておく
+            preview(maxWidth: 460, maxHeight: max(320, height - 56))
             VStack(alignment: .leading, spacing: 16) {
                 header
                 tabBar
-                switch tab {
-                case .image:
-                    options(showsFormat: true)
-                    captionEditor
-                    imageShareButton
-                    imageActions
-                case .text:
-                    textPreview
-                    options(showsFormat: false)
-                    textShareButton
-                    RuleButton(title: "文字をコピー", action: copyText)
-                }
+                controls
                 footnotes
             }
             .frame(maxWidth: .infinity)
         }
         .padding(.horizontal, 32)
         .padding(.vertical, 28)
+    }
+
+    /// 見本（画像の明細書か、リプレイ動画）
+    @ViewBuilder
+    private func preview(maxWidth: CGFloat, maxHeight: CGFloat) -> some View {
+        if tab == .video {
+            ShareVideoPreview(export: video, script: videoScript, content: content, maxWidth: maxWidth, maxHeight: maxHeight)
+        } else {
+            CanvasPreview(format: format, content: content, maxWidth: maxWidth, maxHeight: maxHeight)
+        }
+    }
+
+    /// 形ごとの設定の欄と、共有・保存・コピー
+    @ViewBuilder private var controls: some View {
+        switch tab {
+        case .image:
+            options(showsFormat: true)
+            captionEditor
+            imageShareButton
+            imageActions
+        case .video:
+            options(showsFormat: false)
+            captionEditor
+            ShareVideoControls(export: video, isAvailable: videoScript != nil, caption: caption, onStart: startVideo, announce: announce)
+        case .text:
+            textPreview
+            options(showsFormat: false)
+            textShareButton
+            RuleButton(title: "文字をコピー", action: copyText)
+        }
     }
 
     private var header: some View {
@@ -230,39 +254,7 @@ struct SharePreviewScreen: View {
     }
 
     private var tabBar: some View {
-        HStack(spacing: 0) {
-            tabButton(.image, title: "画像")
-            Rectangle()
-                .fill(Theme.navy)
-                .frame(width: 1.5)
-            tabButton(.text, title: "文字")
-        }
-        .fixedSize(horizontal: false, vertical: true)
-        .padding(.vertical, 3)
-        .overlay(alignment: .top) { DoubleRule() }
-        .overlay(alignment: .bottom) { DoubleRule() }
-    }
-
-    private func tabButton(_ value: Tab, title: LocalizedStringKey) -> some View {
-        let selected = tab == value
-        return Button {
-            tab = value
-        } label: {
-            Text(title)
-                .scaledFont(.mincho(14, selected ? .extraBold : .bold))
-                .tracking(1.7)
-                .foregroundStyle(selected ? Theme.lightPaper : Theme.navy)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 11)
-                .background {
-                    if selected {
-                        InkSurface(color: Theme.navy)
-                    }
-                }
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(selected ? .isSelected : [])
+        ShareTabBar(selection: $tab, tabs: [(.image, "画像"), (.video, "動画"), (.text, "文字")])
     }
 }
 
@@ -420,6 +412,12 @@ extension SharePreviewScreen {
                 .scaledFont(.mincho(12, .medium))
                 .foregroundStyle(Theme.subText)
                 .fixedSize(horizontal: false, vertical: true)
+            if tab == .video {
+                Text("動画はこの画面を閉じると、端末から消えます。")
+                    .scaledFont(.mincho(12, .medium))
+                    .foregroundStyle(Theme.subText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 
@@ -462,32 +460,5 @@ extension SharePreviewScreen {
     private func announce(_ message: String) {
         notice = message
         AccessibilityNotification.Announcement(message).post()
-    }
-}
-
-/// 明細書のプレビュー。書き出す画像と同じものを縮めて見せる（VoiceOver では明細書の項目を 1 行ずつ読める）
-private struct CanvasPreview: View {
-    let format: ShareImageFormat
-    let content: TributeStatementContent
-    let maxWidth: CGFloat
-    let maxHeight: CGFloat
-
-    var body: some View {
-        let size = format.canvasSize
-        let scale = max(0.1, min(1, maxWidth / size.width, maxHeight / size.height))
-        ShareImageCanvas(format: format, content: content)
-            .scaleEffect(scale, anchor: .topLeading)
-            .frame(width: size.width * scale, height: size.height * scale, alignment: .topLeading)
-            .overlay { Rectangle().strokeBorder(Theme.navy.opacity(0.4), lineWidth: 1) }
-            .accessibilityElement(children: .contain)
-            .accessibilityLabel(Text("献上明細書のプレビュー"))
-    }
-}
-
-/// 破線の枠（文面の欄）
-private struct DashedBorder: View {
-    var body: some View {
-        Rectangle()
-            .strokeBorder(Theme.navy, style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
     }
 }

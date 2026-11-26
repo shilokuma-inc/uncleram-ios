@@ -18,6 +18,8 @@
 
 - シェア画像（献上明細書）を目で確かめるときは、`TEST_RUNNER_UNCLERAM_SHARE_IMAGE_DIR=<リポジトリの外のフォルダ>` を付けて `-only-testing:UncleRAMTests/ShareTests` を流す。xcodebuild は `TEST_RUNNER_` を外した名前でテストに環境変数を渡すので、4:5 と 9:16 の PNG（納品と回収）がそのフォルダに書き出される。Mac と iOS Simulator のどちらでも書き出せる（2026-11-26）
 
+- リプレイ動画を目で確かめるときは、`TEST_RUNNER_UNCLERAM_REPLAY_VIDEO_DIR=<リポジトリの外のフォルダ>` を付けて `-only-testing:UncleRAMTests/ReplayTests` を流す。速達便の納品・回収とデイリーの回収の mp4（約 10 秒）と、何コマかの PNG（AVAssetImageGenerator で取り出したもの）が書き出される。Swift Testing の 1 つのテストだけを流すときは `-only-testing:'UncleRAMTests/ReplayTests/exportedVideoHasExpectedFormat()'` のように `()` まで付ける（付けないと 0 件で成功になる）（2026-11-26）
+
 - CI の Build は、作業ブランチへの push では Unit テストだけを流し、PR では iOS Simulator の UI テストまで流す。画面の流れを変えたら、手元で `-only-testing:UncleRAMUITests/UncleRAMUITests` を流しておく。UI テストは起動引数 `-hasAcknowledgedSafetyNotice YES`（UserDefaults の引数のドメイン）で、初回の案内を飛ばしている（2026-11-26）
 
 - iPad の横向きや Split View の幅の画面は、Simulator をコマンドで回せないので、一時的な Unit テスト（コミットしない）で描いて確かめる。`UIWindow(windowScene:)` に決まった大きさの `frame` を付けて `UIHostingController` を載せ、1 秒ほど待ってから `drawHierarchy(in:afterScreenUpdates: true)` で PNG に書き出す。画面より大きいウィンドウでも、ScrollView の中も描ける。Dynamic Type は `.environment(\.dynamicTypeSize, .xxxLarge)` で変えられ、縦向きの Simulator では `xcrun simctl ui <UDID> content_size extra-extra-extra-large` で変えられる（2026-11-26）
@@ -41,6 +43,12 @@
 - afconvert で作った AAC（`.m4a`）は、エンコーダーの頭の遅れ（priming 2112 フレーム）と終わりの余り（remainder）を持つ。AVAudioFile でデコードすると元の長さとフレーム数まで一致し、AVAudioPlayer の `numberOfLoops = -1` でも継ぎ目が出ない。ループさせる音（BGM を含む）も AAC でよい。`afinfo` の「valid frames + priming + remainder」で確かめられる（2026-11-26）
 - AVAudioPlayer の `play(atTime:)` で遅らせて鳴らす予定は、鳴る前に `stop()` すれば取り消せる（2026-11-26、macOS で確かめた）
 - Freesound の音は、元のファイルを取るにはログイン（API なら OAuth）が要るが、試聴用の MP3（`https://cdn.freesound.org/previews/<ID の上 3 桁>/<ID>_<作者の ID>-hq.mp3`、128kbps）はログインなしで取れる。URL は音のページに書いてある。検索は `https://freesound.org/search/?q=<語>&f=license:"Creative Commons 0"` で CC0 に絞れるが、ライセンスは音ごとのページ（`creativecommons.org/publicdomain/zero/1.0/` へのリンク）でも確かめる（2026-11-26）
+
+## 動画
+
+- AVAssetWriter に絵と音の 2 つの入力を足して `expectsMediaDataInRealTime = false` で書くとき、音を「絵の時刻 + 0.5 秒」までしか書かないと、絵の入力が受け取れないまま止まった（書き手は自分の区切りで交互に並べるので、もっと先の音を待つ）。絵を受け取れないときは、音を 1 回分ずつ先に書いてから見直す（`ReplayVideoEncoder`）（2026-11-26）
+- 1080×1920 の SwiftUI を ImageRenderer で 1 コマずつ描くと、Mac では 1 コマ 5ms ほどで、10 秒の動画が 1〜2 秒で書き出せた。描いた絵を手放せば、描くだけでは使用量はほとんど増えない（全部のコマを描いて +10MB）。書き出しの間に増えるのは符号化の係の中の分で、Mac（ハードウェアで符号化）は BGRA のまま渡すと +130MB、vImage で YUV（4:2:0）に詰め直し、`CVPixelBufferPoolCreatePixelBufferWithAuxAttributes` に `kCVPixelBufferPoolAllocationThresholdKey` を渡してプールから取れる数を抑えると +60MB ほどになった。iOS Simulator はソフトウェアで符号化するので、係が 40 コマほどを中に持ち、プールを抑えても +410MB ほどで頭打ちになる（書き終えると戻る）。Simulator の使用量で実機を見積もらない。CI（GitHub Actions）の Mac の仮想マシンでは、描くだけで +465MB（描くときの絵の置き場。2 回目は増えない）になるので、使用量のテストは絶対の値ではなく、2 回目に増えないことで確かめる。`render(rasterizationScale:)` で自分の CGContext に描く（CPU で描く）方法は、3 倍遅く、使用量もあまり変わらなかった（2026-11-26）
+- SwiftUI の `VideoPlayer`（`import AVKit`）だけを使うと、アプリに AVKit.framework が結び付けられず（`otool -L` に `_AVKit_SwiftUI` だけが出る）、Mac で見本を出したところで `failed to demangle superclass of VideoPlayerView from mangled name 'So12AVPlayerViewC'` で落ちた。`AVPlayerView`（Mac）・`AVPlayerViewController`（iOS）を Representable で直接使うと、AVKit が結び付けられて落ちない（2026-11-26）
 
 ## 仕様と試算
 

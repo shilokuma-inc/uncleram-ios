@@ -10,6 +10,8 @@ import SwiftUI
 @main
 struct UncleRAM: App {
     init() {
+        // 前に作ったリプレイ動画の残り（共有の途中でアプリが終わったときなど）を消す（docs/SPEC.md「共有機能」）
+        ReplayVideoFiles.removeAll()
         // 効果音は起動の時に読み込む。ラウンドの枠を量るより前に済ませる（docs/SPEC.md「音と振動」）
         SoundBank.shared.load()
     }

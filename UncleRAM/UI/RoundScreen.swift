@@ -12,6 +12,8 @@ struct RoundScreen: View {
     @State private var showsHowToPlay = false
     /// 効果音を鳴らすきっかけ（計測のときは鳴らさない）
     @State private var sounds: RoundSounds
+    /// リプレイ動画の元の記録（計測と撮影モードでは記録しない）
+    @State private var replayRecorder = RoundReplayRecorder()
     @Environment(\.scenePhase) private var scenePhase
     @Environment(LocalStore.self) private var store: LocalStore?
     /// ランキングに送る。撮影モードやプレビューなど、AppRoot の外では無い
@@ -59,6 +61,7 @@ struct RoundScreen: View {
         .animation(.easeInOut(duration: 0.2), value: showsHowToPlay)
         .environment(coach)
         .environment(\.roundMode, mode)
+        .environment(\.roundReplay, replayRecorder.replay)
         .onAppear {
             if let scene = ScreenshotDemo.scene {
                 engine.showDemo(scene)
@@ -82,11 +85,13 @@ struct RoundScreen: View {
         }
         .onChange(of: engine.hintStage) { _, stage in
             sounds.hintStageChanged(to: stage)
+            replayRecorder.hintStageChanged(to: stage)
             if let bubble = TutorialBubble.forHintStage(stage), !engine.isAutomated {
                 coach.reveal(bubble)
             }
         }
         .onChange(of: engine.bluff) { _, bluff in
+            replayRecorder.bluffChanged(to: bluff)
             if bluff == .grinning, !engine.isAutomated {
                 coach.reveal(.bluff)
             }
@@ -108,6 +113,7 @@ struct RoundScreen: View {
         .onChange(of: engine.phase) { _, phase in
             recordDaily(phase)
             sounds.phaseChanged(to: phase)
+            replayRecorder.phaseChanged(to: phase, engine: engine)
             guard case let .result(outcome) = phase else {
                 // 結果の段階を出たら（次のラウンド・タイトル）、回収演出の「結果を見る」を戻す
                 revealsResult = false

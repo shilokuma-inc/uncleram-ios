@@ -3,7 +3,7 @@ import os
 
 /// 効果音（docs/SPEC.md「音と振動」）。ファイルは `Tools/sounds/make_sounds.py` が作る `UncleRAM/Sounds/<rawValue>.m4a`。
 /// 出典とライセンスは、設定の「ライセンス」と docs/HANDOFF.md「素材の出典とライセンス」
-enum SoundEffect: String, CaseIterable {
+nonisolated enum SoundEffect: String, CaseIterable, Sendable {
     /// 回収ライン接近（ヒントの 2 段階目）: 回収飛行船のプロペラ。ループで鳴らし、近づくにつれて大きくする
     case propeller
     /// 納品: 判子とタイプライターのベル
