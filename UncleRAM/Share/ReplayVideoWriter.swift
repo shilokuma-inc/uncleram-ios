@@ -134,13 +134,14 @@ actor ReplayVideoEncoder {
     private let framesPerSecond: Int32
     /// 受け取った絵を、YUV に詰め直す前に描いておく場所（1 枚だけを使い回す）
     private let canvas: CGContext
-    private var conversion = vImage_ARGBToYpCbCr()
+    private var conversion: vImage_ARGBToYpCbCr
 
     init(url: URL, audio: [Float], framesPerSecond: Int = ReplayTimeline.framesPerSecond) throws {
         let writer = try AVAssetWriter(outputURL: url, fileType: .mp4)
         // 投稿先が頭から読めるよう、目次（moov）を前に置く
         writer.shouldOptimizeForNetworkUse = true
-        let videoInput = AVAssetWriterInput(mediaType: .video, outputSettings: Self.videoSettings(framesPerSecond: framesPerSecond))
+        let settings = ReplayVideoFormat.videoSettings(framesPerSecond: framesPerSecond)
+        let videoInput = AVAssetWriterInput(mediaType: .video, outputSettings: settings)
         videoInput.expectsMediaDataInRealTime = false
         let adaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: videoInput, sourcePixelBufferAttributes: [
             kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange,
@@ -160,7 +161,9 @@ actor ReplayVideoEncoder {
         }
         writer.add(videoInput)
         writer.add(audioInput)
-        guard let audioFormat = Self.makeAudioFormat(), let canvas = Self.makeCanvas(), writer.startWriting() else {
+        let audioFormat = ReplayVideoFormat.makeAudioFormat()
+        let canvas = ReplayVideoFormat.makeCanvas()
+        guard let audioFormat, let canvas, writer.startWriting() else {
             throw Failure.failed(writer.error?.localizedDescription ?? "startWriting")
         }
         writer.startSession(atSourceTime: .zero)
@@ -172,83 +175,7 @@ actor ReplayVideoEncoder {
         self.audio = audio
         self.framesPerSecond = Int32(framesPerSecond)
         self.canvas = canvas
-        // BT.709（ビデオの範囲 16〜235）で YUV にする。書き出しの設定（AVVideoColorPropertiesKey）と合わせる
-        var matrix = vImage_ARGBToYpCbCrMatrix(
-            R_Yp: 0.2126, G_Yp: 0.7152, B_Yp: 0.0722,
-            R_Cb: -0.1146, G_Cb: -0.3854, B_Cb_R_Cr: 0.5,
-            G_Cr: -0.4542, B_Cr: -0.0458
-        )
-        var range = vImage_YpCbCrPixelRange(
-            Yp_bias: 16, CbCr_bias: 128, YpRangeMax: 235, CbCrRangeMax: 240,
-            YpMax: 235, YpMin: 16, CbCrMax: 240, CbCrMin: 16
-        )
-        vImageConvert_ARGBToYpCbCr_GenerateConversion(
-            &matrix, &range, &conversion, kvImageARGB8888, kvImage420Yp8_CbCr8, vImage_Flags(kvImageNoFlags)
-        )
-    }
-
-    /// 受け取った絵を描く場所（BGRA）
-    private static func makeCanvas() -> CGContext? {
-        let context = CGContext(
-            data: nil,
-            width: width,
-            height: height,
-            bitsPerComponent: 8,
-            bytesPerRow: 0,
-            space: CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.noneSkipFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
-        )
-        context?.interpolationQuality = .high
-        return context
-    }
-
-    /// H.264（High）、6Mbps。色は BT.709 の印を付ける
-    private static func videoSettings(framesPerSecond: Int) -> [String: Any] {
-        [
-            AVVideoCodecKey: AVVideoCodecType.h264,
-            AVVideoWidthKey: width,
-            AVVideoHeightKey: height,
-            AVVideoColorPropertiesKey: [
-                AVVideoColorPrimariesKey: AVVideoColorPrimaries_ITU_R_709_2,
-                AVVideoTransferFunctionKey: AVVideoTransferFunction_ITU_R_709_2,
-                AVVideoYCbCrMatrixKey: AVVideoYCbCrMatrix_ITU_R_709_2
-            ],
-            AVVideoCompressionPropertiesKey: [
-                AVVideoAverageBitRateKey: 6_000_000,
-                AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel,
-                // コマの並べ替え（B フレーム）をしない。符号化の係が先のコマを溜めないので、手元に持つ絵が少なくて済む
-                AVVideoAllowFrameReorderingKey: false,
-                AVVideoExpectedSourceFrameRateKey: framesPerSecond,
-                AVVideoMaxKeyFrameIntervalKey: framesPerSecond * 2
-            ]
-        ]
-    }
-
-    /// 重ねた音の形（モノラル・44.1kHz・32 ビットの浮動小数）
-    private static func makeAudioFormat() -> CMAudioFormatDescription? {
-        var description = AudioStreamBasicDescription(
-            mSampleRate: ReplayAudioMixer.sampleRate,
-            mFormatID: kAudioFormatLinearPCM,
-            mFormatFlags: kLinearPCMFormatFlagIsFloat | kAudioFormatFlagIsPacked,
-            mBytesPerPacket: 4,
-            mFramesPerPacket: 1,
-            mBytesPerFrame: 4,
-            mChannelsPerFrame: 1,
-            mBitsPerChannel: 32,
-            mReserved: 0
-        )
-        var format: CMAudioFormatDescription?
-        CMAudioFormatDescriptionCreate(
-            allocator: kCFAllocatorDefault,
-            asbd: &description,
-            layoutSize: 0,
-            layout: nil,
-            magicCookieSize: 0,
-            magicCookie: nil,
-            extensions: nil,
-            formatDescriptionOut: &format
-        )
-        return format
+        conversion = ReplayVideoFormat.makeConversion()
     }
 
     /// `index` 番目のコマを書く
@@ -416,7 +343,12 @@ actor ReplayVideoEncoder {
         }
         CVPixelBufferLockBaseAddress(buffer, [])
         defer { CVPixelBufferUnlockBaseAddress(buffer, []) }
-        var source = vImage_Buffer(data: pixels, height: vImagePixelCount(Self.height), width: vImagePixelCount(Self.width), rowBytes: canvas.bytesPerRow)
+        var source = vImage_Buffer(
+            data: pixels,
+            height: vImagePixelCount(Self.height),
+            width: vImagePixelCount(Self.width),
+            rowBytes: canvas.bytesPerRow
+        )
         var luma = vImage_Buffer(
             data: CVPixelBufferGetBaseAddressOfPlane(buffer, 0),
             height: vImagePixelCount(CVPixelBufferGetHeightOfPlane(buffer, 0)),
@@ -438,5 +370,106 @@ actor ReplayVideoEncoder {
         CVBufferSetAttachment(buffer, kCVImageBufferYCbCrMatrixKey, kCVImageBufferYCbCrMatrix_ITU_R_709_2, .shouldPropagate)
         CVBufferSetAttachment(buffer, kCVImageBufferColorPrimariesKey, kCVImageBufferColorPrimaries_ITU_R_709_2, .shouldPropagate)
         CVBufferSetAttachment(buffer, kCVImageBufferTransferFunctionKey, kCVImageBufferTransferFunction_ITU_R_709_2, .shouldPropagate)
+    }
+}
+
+/// リプレイ動画の書き出しの形（絵・音・色）
+nonisolated enum ReplayVideoFormat {
+    /// 受け取った絵を描く場所（BGRA）
+    static func makeCanvas() -> CGContext? {
+        let context = CGContext(
+            data: nil,
+            width: ReplayVideoEncoder.width,
+            height: ReplayVideoEncoder.height,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.noneSkipFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
+        )
+        context?.interpolationQuality = .high
+        return context
+    }
+
+    /// H.264（High）、6Mbps。色は BT.709 の印を付ける
+    static func videoSettings(framesPerSecond: Int) -> [String: Any] {
+        [
+            AVVideoCodecKey: AVVideoCodecType.h264,
+            AVVideoWidthKey: ReplayVideoEncoder.width,
+            AVVideoHeightKey: ReplayVideoEncoder.height,
+            AVVideoColorPropertiesKey: [
+                AVVideoColorPrimariesKey: AVVideoColorPrimaries_ITU_R_709_2,
+                AVVideoTransferFunctionKey: AVVideoTransferFunction_ITU_R_709_2,
+                AVVideoYCbCrMatrixKey: AVVideoYCbCrMatrix_ITU_R_709_2
+            ],
+            AVVideoCompressionPropertiesKey: [
+                AVVideoAverageBitRateKey: 6_000_000,
+                AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel,
+                // コマの並べ替え（B フレーム）をしない。符号化の係が先のコマを溜めないので、手元に持つ絵が少なくて済む
+                AVVideoAllowFrameReorderingKey: false,
+                AVVideoExpectedSourceFrameRateKey: framesPerSecond,
+                AVVideoMaxKeyFrameIntervalKey: framesPerSecond * 2
+            ]
+        ]
+    }
+
+    /// 重ねた音の形（モノラル・44.1kHz・32 ビットの浮動小数）
+    static func makeAudioFormat() -> CMAudioFormatDescription? {
+        var description = AudioStreamBasicDescription(
+            mSampleRate: ReplayAudioMixer.sampleRate,
+            mFormatID: kAudioFormatLinearPCM,
+            mFormatFlags: kLinearPCMFormatFlagIsFloat | kAudioFormatFlagIsPacked,
+            mBytesPerPacket: 4,
+            mFramesPerPacket: 1,
+            mBytesPerFrame: 4,
+            mChannelsPerFrame: 1,
+            mBitsPerChannel: 32,
+            mReserved: 0
+        )
+        var format: CMAudioFormatDescription?
+        CMAudioFormatDescriptionCreate(
+            allocator: kCFAllocatorDefault,
+            asbd: &description,
+            layoutSize: 0,
+            layout: nil,
+            magicCookieSize: 0,
+            magicCookie: nil,
+            extensions: nil,
+            formatDescriptionOut: &format
+        )
+        return format
+    }
+
+    /// BT.709（ビデオの範囲 16〜235）で YUV にする変換。書き出しの設定（AVVideoColorPropertiesKey）と合わせる
+    static func makeConversion() -> vImage_ARGBToYpCbCr {
+        var matrix = vImage_ARGBToYpCbCrMatrix(
+            R_Yp: 0.2126,
+            G_Yp: 0.7152,
+            B_Yp: 0.0722,
+            R_Cb: -0.1146,
+            G_Cb: -0.3854,
+            B_Cb_R_Cr: 0.5,
+            G_Cr: -0.4542,
+            B_Cr: -0.0458
+        )
+        var range = vImage_YpCbCrPixelRange(
+            Yp_bias: 16,
+            CbCr_bias: 128,
+            YpRangeMax: 235,
+            CbCrRangeMax: 240,
+            YpMax: 235,
+            YpMin: 16,
+            CbCrMax: 240,
+            CbCrMin: 16
+        )
+        var conversion = vImage_ARGBToYpCbCr()
+        vImageConvert_ARGBToYpCbCr_GenerateConversion(
+            &matrix,
+            &range,
+            &conversion,
+            kvImageARGB8888,
+            kvImage420Yp8_CbCr8,
+            vImage_Flags(kvImageNoFlags)
+        )
+        return conversion
     }
 }
