@@ -22,6 +22,13 @@
 
 - CI の Build は、作業ブランチへの push では Unit テストだけを流し、PR では iOS Simulator の UI テストまで流す。画面の流れを変えたら、手元で `-only-testing:UncleRAMUITests/UncleRAMUITests` を流しておく。UI テストは起動引数 `-hasAcknowledgedSafetyNotice YES`（UserDefaults の引数のドメイン）で、初回の案内を飛ばしている（2026-11-26）
 
+- iPad の横向きや Split View の幅の画面は、Simulator をコマンドで回せないので、一時的な Unit テスト（コミットしない）で描いて確かめる。`UIWindow(windowScene:)` に決まった大きさの `frame` を付けて `UIHostingController` を載せ、1 秒ほど待ってから `drawHierarchy(in:afterScreenUpdates: true)` で PNG に書き出す。画面より大きいウィンドウでも、ScrollView の中も描ける。Dynamic Type は `.environment(\.dynamicTypeSize, .xxxLarge)` で変えられ、縦向きの Simulator では `xcrun simctl ui <UDID> content_size extra-extra-extra-large` で変えられる（2026-11-26）
+
+## 画面の組み方
+
+- `scaleEffect` で画面ごと拡大しても（iPad で iPhone のレイアウトを拡大する `ScreenLayout`）、文字と線はにじまない。SwiftUI は拡大したあとの大きさで描き直す（2026-11-26、iPad Pro 13 インチの Simulator で 1.5 倍にして確かめた）
+- `scaleEffect`（倍率 1 でも）の中にある ScrollView のボタンは、XCUITest がスクロールして見えるようにした直後に「Computed hit point {-1, -1}」で押せないことがある（iPhone 17 Pro の Simulator・Xcode 26.6 で、タイトルの「設定」。develop の形では起きなかった）。拡大しない端末（iPhone・Mac）では `scaleEffect` を通さない（2026-11-26）
+
 ## Game Center
 
 - UI テストでは、起動引数 `-disableGameCenter YES` で Game Center のサインインを始めない。最初のラウンドを終えるとサインインを始めるので、Simulator で Game Center のサインインの画面が出て、UI テストの流れが止まるため（2026-11-26）
