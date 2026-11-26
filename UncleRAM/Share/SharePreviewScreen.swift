@@ -26,7 +26,8 @@ struct SharePreviewScreen: View {
     @State private var editedCaption: String?
     /// 文面の欄を編集しているか。開いたときは選ばない（Mac はシートを開くと最初の入力欄が全文を選んだ状態になり、打った文字で消えてしまう）
     @FocusState private var editsCaption: Bool
-    @State private var rendered: RenderedShareImage?
+    /// 書き出した画像と、書き出したときの大きさ・端末の表示。共有・保存・コピーには、今の設定と一致するもの（`rendered`）だけを使う
+    @State private var renderedForKey: (key: RenderKey, image: RenderedShareImage)?
     /// 保存やコピーのあとに出す一言
     @State private var notice: String?
     #if os(macOS)
@@ -61,8 +62,9 @@ struct SharePreviewScreen: View {
         .foregroundStyle(Theme.navy)
         .preferredColorScheme(.light)
         // 共有・保存・コピーに使う画像は、大きさと端末の表示が変わるたびに書き出し直す
-        .task(id: RenderKey(format: format, device: deviceText)) {
-            rendered = ShareImageRenderer.render(format: format, content: content)
+        .task(id: renderKey) {
+            let key = renderKey
+            renderedForKey = ShareImageRenderer.render(format: format, content: content).map { (key, $0) }
         }
         #if os(macOS)
         .task {
@@ -98,6 +100,18 @@ struct SharePreviewScreen: View {
     private struct RenderKey: Hashable {
         let format: ShareImageFormat
         let device: String
+    }
+
+    private var renderKey: RenderKey {
+        RenderKey(format: format, device: deviceText)
+    }
+
+    /// 今の設定で書き出した画像。「機種名を隠す」を切り替えた直後など、書き出し直すまでは nil にして、古い画像（機種名入り）を出さない
+    private var rendered: RenderedShareImage? {
+        guard let renderedForKey, renderedForKey.key == renderKey else {
+            return nil
+        }
+        return renderedForKey.image
     }
 
     private var hidesModel: Bool {
