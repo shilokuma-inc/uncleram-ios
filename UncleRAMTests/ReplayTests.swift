@@ -311,6 +311,15 @@ extension ReplayTests {
         // 書体や絵を読み込む最初の 1 回の分は除いて量る（1 コマ描いておく）
         let timeline = ReplayTimeline(script: script)
         _ = ReplayVideoMaker.render(timeline.frame(at: 30), script: script, speed: timeline.speed, content: content)
+        // 描いた絵は、描くたびに手放す（全部のコマを描いても、コマの数には比例しない。Mac は描くときの絵の置き場で +80MB ほど、iOS Simulator は +10MB ほど）
+        let renderBefore = ProcessMemory.footprintBytes() ?? 0
+        var renderPeak = renderBefore
+        for index in 0..<timeline.frameCount {
+            _ = ReplayVideoMaker.render(timeline.frame(at: index), script: script, speed: timeline.speed, content: content)
+            renderPeak = max(renderPeak, ProcessMemory.footprintBytes() ?? 0)
+        }
+        let renderGrowth = Double(renderPeak > renderBefore ? renderPeak - renderBefore : 0) / Double(Self.megabyte)
+        #expect(renderGrowth < 200)
         let before = ProcessMemory.footprintBytes() ?? 0
         var peak = before
         let video = try await ReplayVideoMaker.make(script: script, content: content, to: url) { _ in
@@ -326,12 +335,17 @@ extension ReplayTests {
         #expect(try await videoTrack.load(.naturalSize) == CGSize(width: 1_080, height: 1_920))
         #expect(abs(try await videoTrack.load(.nominalFrameRate) - 30) < 0.5)
         #expect(try await !asset.loadTracks(withMediaType: .audio).isEmpty)
-        // 1 コマずつ書いて手放すので、コマの数（155 コマ × 8MB = 1.2GB）に比例して増えない。
-        // 符号化を待つコマは 6 コマまで（YUV で 1 コマ 3MB）。残りは書き手と ImageRenderer が描くときの絵の置き場で、書き出しのあと数秒で戻る
+        // 1 コマずつ書いて手放すので、コマの数（155 コマ × 8MB = 1.2GB）に比例して増えない。符号化を待つコマは 6 コマまで（YUV で 1 コマ 3MB）。
+        // 増える分の多くは符号化の係の中の分で、書き終えると戻る（Mac は +30〜140MB）。iOS Simulator はソフトウェアで符号化するので、
+        // 係が 40 コマほどを中に持ち、+410MB ほどで頭打ちになる（描くだけなら +10MB。実機は Mac と同じくハードウェアで符号化する）
         let growth = Double(peak > before ? peak - before : 0) / Double(Self.megabyte)
         let remaining = Double(after > before ? after - before : 0) / Double(Self.megabyte)
-        print("replay export: \(timeline.frameCount) frames, footprint +\(Int(growth)) MB at peak, +\(Int(remaining)) MB after")
+        print("replay: render +\(Int(renderGrowth)) MB, export +\(Int(growth)) MB (+\(Int(remaining)) MB after)")
+        #if targetEnvironment(simulator)
+        #expect(growth < 600)
+        #else
         #expect(growth < 300)
+        #endif
 
         if let directory = ProcessInfo.processInfo.environment["UNCLERAM_REPLAY_VIDEO_DIR"] {
             try await Self.writeSamples(to: URL(fileURLWithPath: directory, isDirectory: true))
