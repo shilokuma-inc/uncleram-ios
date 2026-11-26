@@ -11,10 +11,17 @@ struct ResultView: View {
     /// タイトルへ戻る。nil のときは出さない
     var onExit: (() -> Void)?
     @Environment(\.roundMode) private var mode
+    /// 共有のプレビューを開いているか
+    @State private var sharesStatement = false
 
     /// デイリーは、その日のうちは回収ラインの位置を明かさない（「納品」「回収」とニアミスの判子だけ）
     private var revealsLine: Bool {
         mode.revealsCollectionLine()
+    }
+
+    /// 「明細書をシェア」で載せるモード（速達便か、その日のデイリーか）
+    private var shareMode: ShareSummary.Mode {
+        mode.daily.map { .init(daily: $0) } ?? .express
     }
 
     var body: some View {
@@ -31,9 +38,22 @@ struct ResultView: View {
                     figures
                 }
                 Spacer(minLength: 24)
+                if shareSummary != nil {
+                    // デザイン（Reveal.png）どおり、主ボタンを「明細書をシェア」にする。Mac は ⌘S
+                    PrimaryInkButton(title: "明細書をシェア", fontSize: 17, verticalPadding: 15) { sharesStatement = true }
+                        .keyboardShortcut("s", modifiers: .command)
+                }
                 if mode.daily != nil, let onExit {
                     // デイリーは 1 日 1 回なので、もう一度はできない
-                    PrimaryInkButton(title: "タイトルへ", action: onExit)
+                    if shareSummary != nil {
+                        RuleButton(title: "タイトルへ", action: onExit)
+                            .keyboardShortcut(.defaultAction)
+                    } else {
+                        PrimaryInkButton(title: "タイトルへ", action: onExit)
+                            .keyboardShortcut(.defaultAction)
+                    }
+                } else if shareSummary != nil {
+                    RuleButton(title: "もう一度献上する", action: onRetry)
                         .keyboardShortcut(.defaultAction)
                 } else {
                     PrimaryInkButton(title: "もう一度献上する", action: onRetry)
@@ -59,6 +79,16 @@ struct ResultView: View {
         }
         .scrollBounceBehavior(.basedOnSize)
         .foregroundStyle(Theme.navy)
+        .sheet(isPresented: $sharesStatement) {
+            if let shareSummary {
+                SharePreviewScreen(summary: shareSummary)
+            }
+        }
+    }
+
+    /// シェアに載せる結果。無効になったラウンド（店じまい）はシェアしない
+    private var shareSummary: ShareSummary? {
+        ShareSummary(outcome: outcome, mode: shareMode)
     }
 
     private var header: some View {

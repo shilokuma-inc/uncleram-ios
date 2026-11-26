@@ -11,9 +11,16 @@ final class LocalStore {
         static let hasCompletedFirstRound = "hasCompletedFirstRound"
         static let seenTutorialBubbles = "seenTutorialBubbles"
         static let reducesCollectEffect = "reducesCollectEffect"
+        static let hidesDeviceModelInShare = "hidesDeviceModelInShare"
         static let dailyRecord = "dailyRecord.v1"
         static let all = [
-            hasAcknowledgedSafetyNotice, tapToDonate, hasCompletedFirstRound, seenTutorialBubbles, reducesCollectEffect, dailyRecord
+            hasAcknowledgedSafetyNotice,
+            tapToDonate,
+            hasCompletedFirstRound,
+            seenTutorialBubbles,
+            reducesCollectEffect,
+            hidesDeviceModelInShare,
+            dailyRecord
         ]
     }
 
@@ -51,6 +58,12 @@ final class LocalStore {
         didSet { defaults.set(hasCompletedFirstRound, forKey: Key.hasCompletedFirstRound) }
     }
 
+    /// 共有のプレビューの「機種名を隠す」。オンなら、シェアの端末の表示を「iPhone（12GB 級）」のように級だけにする。
+    /// 選んだ内容は次に共有するときも使う（docs/SPEC.md「共有機能」の「端末の表示」）
+    var hidesDeviceModelInShare: Bool {
+        didSet { defaults.set(hidesDeviceModelInShare, forKey: Key.hidesDeviceModelInShare) }
+    }
+
     /// 一度見せた吹き出し（`TutorialBubble` の rawValue）。設定「使い方をもう一度見る」で空にする
     var seenTutorialBubbles: Set<String> {
         didSet { defaults.set(seenTutorialBubbles.sorted(), forKey: Key.seenTutorialBubbles) }
@@ -64,6 +77,7 @@ final class LocalStore {
         dailyRecord = defaults.data(forKey: Key.dailyRecord).flatMap { try? JSONDecoder().decode(DailyRecord.self, from: $0) }
         hasCompletedFirstRound = defaults.bool(forKey: Key.hasCompletedFirstRound)
         seenTutorialBubbles = Set(defaults.stringArray(forKey: Key.seenTutorialBubbles) ?? [])
+        hidesDeviceModelInShare = defaults.bool(forKey: Key.hidesDeviceModelInShare)
     }
 
     /// 設定「データの初期化」。端末の中の記録と設定をすべて消す（2026-11-26 にユーザーが決定）。
@@ -79,5 +93,6 @@ final class LocalStore {
         dailyRecord = nil
         hasCompletedFirstRound = false
         seenTutorialBubbles = []
+        hidesDeviceModelInShare = false
     }
 }
