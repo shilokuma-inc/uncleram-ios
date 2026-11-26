@@ -17,7 +17,7 @@ struct ShareVideoPreview: View {
         let scale = max(0.1, min(1, maxWidth / size.width, maxHeight / size.height))
         Group {
             if let player, export.video != nil {
-                VideoPlayer(player: player)
+                ReplayPlayerView(player: player)
                     .accessibilityLabel(Text("リプレイ動画"))
             } else {
                 poster
@@ -224,3 +224,38 @@ private struct ShareVideoLifecycle: ViewModifier {
             }
     }
 }
+
+/// 動画の見本の再生（OS の再生の部品）。SwiftUI の `VideoPlayer` は、Mac で AVKit が読み込まれずに落ちることがあったので
+/// （`AVPlayerView` を直接使わないと、AVKit がアプリに結び付けられない）、AVKit の部品をそのまま置く
+#if os(macOS)
+private struct ReplayPlayerView: NSViewRepresentable {
+    let player: AVPlayer
+
+    func makeNSView(context: Context) -> AVPlayerView {
+        let view = AVPlayerView()
+        view.controlsStyle = .inline
+        view.videoGravity = .resizeAspect
+        view.player = player
+        return view
+    }
+
+    func updateNSView(_ view: AVPlayerView, context: Context) {
+        view.player = player
+    }
+}
+#else
+private struct ReplayPlayerView: UIViewControllerRepresentable {
+    let player: AVPlayer
+
+    func makeUIViewController(context: Context) -> AVPlayerViewController {
+        let controller = AVPlayerViewController()
+        controller.videoGravity = .resizeAspect
+        controller.player = player
+        return controller
+    }
+
+    func updateUIViewController(_ controller: AVPlayerViewController, context: Context) {
+        controller.player = player
+    }
+}
+#endif
