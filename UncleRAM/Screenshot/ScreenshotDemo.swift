@@ -23,6 +23,8 @@ enum ScreenshotDemo {
         case settings
         /// タイトルで「?」の遊び方の 3 コマを開いたところ
         case howToPlay
+        /// 今日のデイリーの結果: ニアミスで納品（回収ラインは明かさない）
+        case dailyDelivered
         /// 待機中のラウンド画面
         case home
         /// 献上中・ヒントの 1 段階目（気配）

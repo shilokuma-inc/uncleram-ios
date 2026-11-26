@@ -10,11 +10,19 @@ struct ResultView: View {
     let onRetry: () -> Void
     /// タイトルへ戻る。nil のときは出さない
     var onExit: (() -> Void)?
-    /// 「明細書をシェア」で載せるモード。デイリーの結果を出すときは `.daily` を渡す
-    var shareMode = ShareSummary.Mode.express
-
+    @Environment(\.roundMode) private var mode
     /// 共有のプレビューを開いているか
     @State private var sharesStatement = false
+
+    /// デイリーは、その日のうちは回収ラインの位置を明かさない（「納品」「回収」とニアミスの判子だけ）
+    private var revealsLine: Bool {
+        mode.revealsCollectionLine()
+    }
+
+    /// 「明細書をシェア」で載せるモード（速達便か、その日のデイリーか）
+    private var shareMode: ShareSummary.Mode {
+        mode.daily.map { .init(daily: $0) } ?? .express
+    }
 
     var body: some View {
         ScrollView {
@@ -31,16 +39,27 @@ struct ResultView: View {
                 }
                 Spacer(minLength: 24)
                 if shareSummary != nil {
-                    // デザイン（Reveal.png）どおり、主ボタンを「明細書をシェア」にする。Mac は ⌘S、return は「もう一度」のまま
+                    // デザイン（Reveal.png）どおり、主ボタンを「明細書をシェア」にする。Mac は ⌘S
                     PrimaryInkButton(title: "明細書をシェア", fontSize: 17, verticalPadding: 15) { sharesStatement = true }
                         .keyboardShortcut("s", modifiers: .command)
+                }
+                if mode.daily != nil, let onExit {
+                    // デイリーは 1 日 1 回なので、もう一度はできない
+                    if shareSummary != nil {
+                        RuleButton(title: "タイトルへ", action: onExit)
+                            .keyboardShortcut(.defaultAction)
+                    } else {
+                        PrimaryInkButton(title: "タイトルへ", action: onExit)
+                            .keyboardShortcut(.defaultAction)
+                    }
+                } else if shareSummary != nil {
                     RuleButton(title: "もう一度献上する", action: onRetry)
                         .keyboardShortcut(.defaultAction)
                 } else {
                     PrimaryInkButton(title: "もう一度献上する", action: onRetry)
                         .keyboardShortcut(.defaultAction)
                 }
-                if let onExit {
+                if mode.daily == nil, let onExit {
                     // ラウンドの途中には置かない（結果のときだけ）。Mac は esc でも戻れる
                     TextLink(title: "タイトルへ", action: onExit)
                         .keyboardShortcut(.cancelAction)
@@ -75,7 +94,7 @@ struct ResultView: View {
     private var header: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("速達便 ・ 結果")
+                Text(mode.resultTitle)
                     .scaledFont(.mincho(13))
                     .foregroundStyle(Theme.subText)
                 Text("取引先: \(Client.allocateCorp.name)")
@@ -105,14 +124,17 @@ struct ResultView: View {
 
     private var reveal: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("今回の献上と回収ライン")
+            Text(revealsLine ? "今回の献上と回収ライン" : "今回の献上（回収ラインは明日お知らせします）")
                 .scaledFont(.mincho(12))
                 .foregroundStyle(Theme.subText)
-            RevealGauge(released: outcome.releasedFill, line: outcome.plan.collectionLine)
+            RevealGauge(released: outcome.releasedFill, line: revealsLine ? outcome.plan.collectionLine : nil)
                 .padding(.vertical, 26)
             DashedRule()
             HStack(alignment: .center) {
-                gapText
+                // 「あと ○%！」はラインまでの距離が分かるので、明かさないときは出さない
+                if revealsLine {
+                    gapText
+                }
                 Spacer()
                 if outcome.nearMissMultiplier > 1 {
                     BoxStamp(caption: "ニアミス", value: "×\(multiplierText)")
@@ -160,7 +182,8 @@ struct ResultView: View {
         case .audited:
             "監査が入りました。"
         case .delivered, .voided:
-            "ラインはここだった"
+            // デイリーは、その日のうちはラインを明かさない（答えは翌日、タイトルの「昨日の回収ライン」で見せる）
+            revealsLine ? "ラインはここだった" : "ラインは明日、お教えしましょう"
         }
     }
 
@@ -220,7 +243,16 @@ struct ResultView: View {
 /// 結果のゲージ。離した位置（▼）と回収ライン（▲）を並べる
 struct RevealGauge: View {
     let released: Double
-    let line: Double
+    /// 回収ライン。nil なら描かない（デイリーのその日のうち）
+    let line: Double?
+
+    private var accessibilityText: Text {
+        if let line {
+            Text("離した位置は枠の \(Formatters.percent(released))%、回収ラインは \(Formatters.percent(line))%")
+        } else {
+            Text("離した位置は枠の \(Formatters.percent(released))%")
+        }
+    }
 
     var body: some View {
         GeometryReader { proxy in
@@ -234,23 +266,27 @@ struct RevealGauge: View {
             .frame(height: 42)
             .overlay { Rectangle().strokeBorder(Theme.navy, lineWidth: 1.5) }
             .overlay(alignment: .leading) {
-                Rectangle()
-                    .fill(Theme.navy)
-                    .frame(width: 3, height: 56)
-                    .offset(x: width * line - 1.5)
+                if let line {
+                    Rectangle()
+                        .fill(Theme.navy)
+                        .frame(width: 3, height: 56)
+                        .offset(x: width * line - 1.5)
+                }
             }
             .overlay {
                 marker(text: "離した \(Formatters.percent(released))%", symbol: "▼", color: Theme.navy, above: true)
                     .position(x: width * min(released, 1), y: -18)
             }
             .overlay {
-                marker(text: "回収ライン \(Formatters.percent(line))%", symbol: "▲", color: Theme.red, above: false)
-                    .position(x: width * line, y: 42 + 18)
+                if let line {
+                    marker(text: "回収ライン \(Formatters.percent(line))%", symbol: "▲", color: Theme.red, above: false)
+                        .position(x: width * line, y: 42 + 18)
+                }
             }
         }
         .frame(height: 42)
         .accessibilityElement()
-        .accessibilityLabel(Text("離した位置は枠の \(Formatters.percent(released))%、回収ラインは \(Formatters.percent(line))%"))
+        .accessibilityLabel(accessibilityText)
     }
 
     private func marker(text: LocalizedStringKey, symbol: String, color: Color, above: Bool) -> some View {

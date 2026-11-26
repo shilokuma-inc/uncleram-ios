@@ -152,9 +152,10 @@ private struct WideCollectLayout: View {
 /// 上の帯「ALLOCATE CORP. 回収部 · 速達便」
 private struct CollectBand: View {
     let fontSize: CGFloat
+    @Environment(\.roundMode) private var mode
 
     var body: some View {
-        Text("ALLOCATE CORP. 回収部 · 速達便")
+        Text(mode.daily == nil ? "ALLOCATE CORP. 回収部 · 速達便" : "ALLOCATE CORP. 回収部 · デイリー")
             .scaledFont(.typewriter(fontSize))
             .tracking(fontSize * 0.06)
             .foregroundStyle(Theme.lightPaper)
@@ -229,6 +230,7 @@ struct CollectHeadline: View {
 /// 会長の一言と、このラウンドの献上分（○○ MB → 0 MB）、回収ラインと超過分
 private struct CollectStatement: View {
     let outcome: RoundOutcome
+    @Environment(\.roundMode) private var mode
     let textSize: CGFloat
     let rowSize: CGFloat
     let lineSize: CGFloat
@@ -255,7 +257,8 @@ private struct CollectStatement: View {
             .scaledFont(.typewriter(rowSize))
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(Text("このラウンドの献上分は \(figures.donatedText) MB から 0 MB に"))
-            Text("回収ラインは \(figures.lineText) MB でした（\(figures.excessText) MB 超過）")
+            // デイリーは、その日のうちは回収ラインの位置を出さない
+            Text(mode.revealsCollectionLine() ? "回収ラインは \(figures.lineText) MB でした（\(figures.excessText) MB 超過）" : "回収ラインは、明日お知らせします")
                 .scaledFont(.mincho(lineSize, .medium))
                 .foregroundStyle(Theme.subText)
                 .fixedSize(horizontal: false, vertical: true)
