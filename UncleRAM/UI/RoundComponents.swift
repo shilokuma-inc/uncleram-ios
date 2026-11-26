@@ -335,8 +335,11 @@ struct Airship: View {
     var showsLabel = true
     /// 練習ラウンドでは兆しを大きく出す（近づいたときに、いつもより大きくする）
     var emphasized = false
+    /// 大きさを決めて描く（リプレイ動画の 1 コマ。段階が変わる途中の大きさを渡す）。nil なら段階で決める
+    var scaleOverride: CGFloat?
 
-    private var scale: CGFloat {
+    /// 段階ごとの大きさ
+    nonisolated static func scale(for stage: RoundPlan.HintStage, emphasized: Bool) -> CGFloat {
         let base: CGFloat = switch stage {
         case .none, .sign:
             1
@@ -346,6 +349,10 @@ struct Airship: View {
             1.3
         }
         return emphasized && stage >= .approach ? base * 1.15 : base
+    }
+
+    private var scale: CGFloat {
+        scaleOverride ?? Self.scale(for: stage, emphasized: emphasized)
     }
 
     var body: some View {
@@ -371,28 +378,39 @@ struct Airship: View {
 struct InkNoise: View {
     /// 濃さの倍率。練習ラウンドでは兆しを大きく出すため濃くする
     var intensity = 1.0
+    /// 模様の番号を決めて描く（リプレイ動画の 1 コマ）。nil なら時計に合わせて 1 秒に 30 回変える
+    var frame: UInt64?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: reduceMotion)) { timeline in
-            Canvas { context, size in
-                let frame = reduceMotion ? 0 : UInt64(timeline.date.timeIntervalSinceReferenceDate * 30)
-                var generator = SplitMix64(seed: frame)
-                for _ in 0..<14 {
-                    let y = generator.uniform(0...Double(size.height))
-                    let height = generator.uniform(1...7)
-                    let x = generator.uniform(-40...Double(size.width) * 0.6)
-                    let width = generator.uniform(40...Double(size.width))
-                    let color = generator.chance(0.7) ? Theme.navy : Theme.red
-                    context.fill(
-                        Path(CGRect(x: x, y: y, width: width, height: height)),
-                        with: .color(color.opacity(min(1, generator.uniform(0.05...0.18) * intensity)))
-                    )
+        Group {
+            if let frame {
+                noise(frame: frame)
+            } else {
+                TimelineView(.animation(minimumInterval: 1.0 / 30, paused: reduceMotion)) { timeline in
+                    noise(frame: reduceMotion ? 0 : UInt64(timeline.date.timeIntervalSinceReferenceDate * 30))
                 }
             }
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
+    }
+
+    private func noise(frame: UInt64) -> some View {
+        Canvas { context, size in
+            var generator = SplitMix64(seed: frame)
+            for _ in 0..<14 {
+                let y = generator.uniform(0...Double(size.height))
+                let height = generator.uniform(1...7)
+                let x = generator.uniform(-40...Double(size.width) * 0.6)
+                let width = generator.uniform(40...Double(size.width))
+                let color = generator.chance(0.7) ? Theme.navy : Theme.red
+                context.fill(
+                    Path(CGRect(x: x, y: y, width: width, height: height)),
+                    with: .color(color.opacity(min(1, generator.uniform(0.05...0.18) * intensity)))
+                )
+            }
+        }
     }
 }
 
