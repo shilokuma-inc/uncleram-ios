@@ -1,3 +1,4 @@
+import Accelerate
 import AVFoundation
 import CoreGraphics
 import CoreMedia
@@ -99,8 +100,10 @@ nonisolated struct ReplayFrameImage: @unchecked Sendable {
 
 /// リプレイ動画を AVAssetWriter で書き出す（H.264 の 1080 × 1920・30fps と、AAC の音）。
 ///
-/// 絵は 1 コマずつ受け取って、すぐに書いて手放す（全部のコマをメモリに持たない）。音は先に重ねておき、
-/// 絵と交互になるよう、絵の時刻より少し先まで書く（AVAssetWriter は、片方だけが先に進みすぎると待つため）
+/// 絵は 1 コマずつ受け取って、YUV（4:2:0、1 コマ 3MB）に詰め直して書き、すぐに手放す（全部のコマをメモリに持たない）。
+/// 符号化を待っているコマは `maximumFramesInFlight` までにする（書き手は受け取れるだけ先に溜めるので、絵が速く描けると
+/// 溜まったコマで使用量が増えるため）。音は先に重ねておき、絵と交互になるよう、絵の時刻より少し先まで書く
+/// （AVAssetWriter は、片方だけが先に進みすぎると待つため）
 actor ReplayVideoEncoder {
     enum Failure: Error {
         case cannotCreateWriter
@@ -116,6 +119,8 @@ actor ReplayVideoEncoder {
     static let audioChunk = 4_096
     /// 書き手が受け取れるようになるのを待つ上限。越えたら止める（進み具合が止まったままにならないように）
     static let waitLimit = Duration.seconds(10)
+    /// 符号化を待っているコマの上限（YUV の 1 コマは 3MB）
+    static let maximumFramesInFlight = 6
 
     private let writer: AVAssetWriter
     private let videoInput: AVAssetWriterInput
@@ -124,8 +129,12 @@ actor ReplayVideoEncoder {
     private let audioFormat: CMAudioFormatDescription
     private let audio: [Float]
     private var audioCursor = 0
+    /// 音を書き終えたと知らせたか
+    private var isAudioFinished = false
     private let framesPerSecond: Int32
-    private let colorSpace = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
+    /// 受け取った絵を、YUV に詰め直す前に描いておく場所（1 枚だけを使い回す）
+    private let canvas: CGContext
+    private var conversion = vImage_ARGBToYpCbCr()
 
     init(url: URL, audio: [Float], framesPerSecond: Int = ReplayTimeline.framesPerSecond) throws {
         let writer = try AVAssetWriter(outputURL: url, fileType: .mp4)
@@ -134,10 +143,10 @@ actor ReplayVideoEncoder {
         let videoInput = AVAssetWriterInput(mediaType: .video, outputSettings: Self.videoSettings(framesPerSecond: framesPerSecond))
         videoInput.expectsMediaDataInRealTime = false
         let adaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: videoInput, sourcePixelBufferAttributes: [
-            kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
+            kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange,
             kCVPixelBufferWidthKey as String: Self.width,
             kCVPixelBufferHeightKey as String: Self.height,
-            kCVPixelBufferCGBitmapContextCompatibilityKey as String: true
+            kCVPixelBufferIOSurfacePropertiesKey as String: [String: Any]()
         ])
         let audioInput = AVAssetWriterInput(mediaType: .audio, outputSettings: [
             AVFormatIDKey: kAudioFormatMPEG4AAC,
@@ -151,7 +160,7 @@ actor ReplayVideoEncoder {
         }
         writer.add(videoInput)
         writer.add(audioInput)
-        guard let audioFormat = Self.makeAudioFormat(), writer.startWriting() else {
+        guard let audioFormat = Self.makeAudioFormat(), let canvas = Self.makeCanvas(), writer.startWriting() else {
             throw Failure.failed(writer.error?.localizedDescription ?? "startWriting")
         }
         writer.startSession(atSourceTime: .zero)
@@ -162,6 +171,35 @@ actor ReplayVideoEncoder {
         self.audioFormat = audioFormat
         self.audio = audio
         self.framesPerSecond = Int32(framesPerSecond)
+        self.canvas = canvas
+        // BT.709（ビデオの範囲 16〜235）で YUV にする。書き出しの設定（AVVideoColorPropertiesKey）と合わせる
+        var matrix = vImage_ARGBToYpCbCrMatrix(
+            R_Yp: 0.2126, G_Yp: 0.7152, B_Yp: 0.0722,
+            R_Cb: -0.1146, G_Cb: -0.3854, B_Cb_R_Cr: 0.5,
+            G_Cr: -0.4542, B_Cr: -0.0458
+        )
+        var range = vImage_YpCbCrPixelRange(
+            Yp_bias: 16, CbCr_bias: 128, YpRangeMax: 235, CbCrRangeMax: 240,
+            YpMax: 235, YpMin: 16, CbCrMax: 240, CbCrMin: 16
+        )
+        vImageConvert_ARGBToYpCbCr_GenerateConversion(
+            &matrix, &range, &conversion, kvImageARGB8888, kvImage420Yp8_CbCr8, vImage_Flags(kvImageNoFlags)
+        )
+    }
+
+    /// 受け取った絵を描く場所（BGRA）
+    private static func makeCanvas() -> CGContext? {
+        let context = CGContext(
+            data: nil,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.noneSkipFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
+        )
+        context?.interpolationQuality = .high
+        return context
     }
 
     /// H.264（High）、6Mbps。色は BT.709 の印を付ける
@@ -220,7 +258,7 @@ actor ReplayVideoEncoder {
         while true {
             try checkStatus()
             guard ContinuousClock.now < deadline else {
-                throw Failure.failed("timed out waiting for the video input")
+                throw Failure.failed("timed out waiting for the video input at frame \(index)")
             }
             try appendAudio(until: time.seconds + Self.audioLead)
             if videoInput.isReadyForMoreMediaData {
@@ -231,15 +269,8 @@ actor ReplayVideoEncoder {
                 try await Task.sleep(for: .milliseconds(2))
             }
         }
-        guard let pool = adaptor.pixelBufferPool else {
-            throw Failure.cannotAppend
-        }
-        var buffer: CVPixelBuffer?
-        CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, pool, &buffer)
-        guard let buffer else {
-            throw Failure.cannotAppend
-        }
-        draw(image.cgImage, into: buffer)
+        let buffer = try await makePixelBuffer(until: deadline)
+        try draw(image.cgImage, into: buffer)
         guard adaptor.append(buffer, withPresentationTime: time) else {
             throw Failure.failed(writer.error?.localizedDescription ?? "append")
         }
@@ -259,7 +290,10 @@ actor ReplayVideoEncoder {
                 try await Task.sleep(for: .milliseconds(2))
             }
         }
-        audioInput.markAsFinished()
+        if !isAudioFinished {
+            audioInput.markAsFinished()
+            isAudioFinished = true
+        }
         writer.endSession(atSourceTime: CMTime(value: CMTimeValue(frameCount), timescale: framesPerSecond))
         await withCheckedContinuation { continuation in
             writer.finishWriting {
@@ -290,7 +324,8 @@ actor ReplayVideoEncoder {
         while audioCursor < limit, try appendAudioChunk() {}
     }
 
-    /// 音を 1 回分（`audioChunk`）書く。書き終えている・今は受け取れないときは false
+    /// 音を 1 回分（`audioChunk`）書く。書き終えている・今は受け取れないときは false。
+    /// 最後まで書いたら、すぐに書き終えたと知らせる（知らせないと、書き手がもっと先の音を待って、絵を受け取らなくなる）
     private func appendAudioChunk() throws -> Bool {
         guard audioCursor < audio.count, audioInput.isReadyForMoreMediaData else {
             return false
@@ -300,6 +335,10 @@ actor ReplayVideoEncoder {
             throw Failure.failed(writer.error?.localizedDescription ?? "append audio")
         }
         audioCursor += count
+        if audioCursor >= audio.count {
+            audioInput.markAsFinished()
+            isAudioFinished = true
+        }
         return true
     }
 
@@ -347,21 +386,57 @@ actor ReplayVideoEncoder {
         return sample
     }
 
-    private func draw(_ image: CGImage, into buffer: CVPixelBuffer) {
+    /// 書き手のプールから 1 コマ分の置き場を取る。符号化を待っているコマが上限に達していたら、空くまで待つ
+    private func makePixelBuffer(until deadline: ContinuousClock.Instant) async throws -> CVPixelBuffer {
+        guard let pool = adaptor.pixelBufferPool else {
+            throw Failure.cannotAppend
+        }
+        let limit = [kCVPixelBufferPoolAllocationThresholdKey as String: Self.maximumFramesInFlight] as CFDictionary
+        while true {
+            var buffer: CVPixelBuffer?
+            let status = CVPixelBufferPoolCreatePixelBufferWithAuxAttributes(kCFAllocatorDefault, pool, limit, &buffer)
+            if status == kCVReturnSuccess, let buffer {
+                return buffer
+            }
+            guard status == kCVReturnWouldExceedAllocationThreshold, ContinuousClock.now < deadline else {
+                throw Failure.failed("pixel buffer \(status)")
+            }
+            try checkStatus()
+            if try !appendAudioChunk() {
+                try await Task.sleep(for: .milliseconds(2))
+            }
+        }
+    }
+
+    /// 絵を描いて、YUV（4:2:0）に詰め直す
+    private func draw(_ image: CGImage, into buffer: CVPixelBuffer) throws {
+        canvas.draw(image, in: CGRect(x: 0, y: 0, width: Self.width, height: Self.height))
+        guard let pixels = canvas.data else {
+            throw Failure.cannotAppend
+        }
         CVPixelBufferLockBaseAddress(buffer, [])
         defer { CVPixelBufferUnlockBaseAddress(buffer, []) }
-        guard let context = CGContext(
-            data: CVPixelBufferGetBaseAddress(buffer),
-            width: CVPixelBufferGetWidth(buffer),
-            height: CVPixelBufferGetHeight(buffer),
-            bitsPerComponent: 8,
-            bytesPerRow: CVPixelBufferGetBytesPerRow(buffer),
-            space: colorSpace,
-            bitmapInfo: CGImageAlphaInfo.noneSkipFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
-        ) else {
-            return
+        var source = vImage_Buffer(data: pixels, height: vImagePixelCount(Self.height), width: vImagePixelCount(Self.width), rowBytes: canvas.bytesPerRow)
+        var luma = vImage_Buffer(
+            data: CVPixelBufferGetBaseAddressOfPlane(buffer, 0),
+            height: vImagePixelCount(CVPixelBufferGetHeightOfPlane(buffer, 0)),
+            width: vImagePixelCount(CVPixelBufferGetWidthOfPlane(buffer, 0)),
+            rowBytes: CVPixelBufferGetBytesPerRowOfPlane(buffer, 0)
+        )
+        var chroma = vImage_Buffer(
+            data: CVPixelBufferGetBaseAddressOfPlane(buffer, 1),
+            height: vImagePixelCount(CVPixelBufferGetHeightOfPlane(buffer, 1)),
+            width: vImagePixelCount(CVPixelBufferGetWidthOfPlane(buffer, 1)),
+            rowBytes: CVPixelBufferGetBytesPerRowOfPlane(buffer, 1)
+        )
+        // 描いた絵はメモリの上で B・G・R・A の順なので、A・R・G・B の順に並べ替えて読む
+        let order: [UInt8] = [3, 2, 1, 0]
+        let error = vImageConvert_ARGB8888To420Yp8_CbCr8(&source, &luma, &chroma, &conversion, order, vImage_Flags(kvImageNoFlags))
+        guard error == kvImageNoError else {
+            throw Failure.failed("vImage \(error)")
         }
-        context.interpolationQuality = .high
-        context.draw(image, in: CGRect(x: 0, y: 0, width: Self.width, height: Self.height))
+        CVBufferSetAttachment(buffer, kCVImageBufferYCbCrMatrixKey, kCVImageBufferYCbCrMatrix_ITU_R_709_2, .shouldPropagate)
+        CVBufferSetAttachment(buffer, kCVImageBufferColorPrimariesKey, kCVImageBufferColorPrimaries_ITU_R_709_2, .shouldPropagate)
+        CVBufferSetAttachment(buffer, kCVImageBufferTransferFunctionKey, kCVImageBufferTransferFunction_ITU_R_709_2, .shouldPropagate)
     }
 }
