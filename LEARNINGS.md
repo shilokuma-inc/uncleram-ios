@@ -56,11 +56,11 @@
 
 ## 計測（試作の合格条件）
 
-- 計測は起動引数 `-bench <ラウンド数> -bench-fill full|sparse` か、Debug・TestFlight のビルドの画面右上の「計測」。Mac の結果は `~/Library/Containers/jp.shilokuma.UncleRAM/Data/Documents/bench-*.json` に残る（2026-11-12）
+- 計測は起動引数 `-bench <ラウンド数> -bench-fill full|sparse` か、Debug・TestFlight のビルドの画面右上の「計測」。「計測」ボタンは既定で隠してあり、設定のいちばん下のバージョン表記を続けて 5 回タップすると出る（もう一度 5 回で隠れる。App Store 版では出せない。2026-11-28、#51）。Mac の結果は `~/Library/Containers/jp.shilokuma.UncleRAM/Data/Documents/bench-*.json` に残る（2026-11-12）
 - 計測中に同じ Mac でビルドや Simulator を動かすと、落ちたフレームと解放の時間が乱れる。計測の間は重い処理を止める。社用の Mac は、それでも回ごとのばらつきが大きかった（落ちたフレーム 0.1〜0.5%）（2026-11-12）
 - `os_proc_available_memory()` は macOS では使えない（unavailable）。iOS の量り方は `#if os(iOS)` で囲む（2026-11-12）
 - 実機の計測の結果は、Mac からケーブルで取り出せる。`xcrun devicectl device info files --device <UDID> --domain-type appDataContainer --domain-identifier jp.shilokuma.UncleRAM --subdirectory Documents` で一覧し、`xcrun devicectl device copy from …（同じ指定）--source Documents/<ファイル名> --destination <保存先>` でコピーする（2026-11-23）
-- Xcode（xcodebuild）から実機に入れた Release ビルドでも、画面の「計測」ボタンは出た（`AppTransaction` の environment が production にならないため）。計測は実際の速さに近い Release で行う（2026-11-23、iPhone 13）
+- Xcode（xcodebuild）から実機に入れた Release ビルドでも、画面の「計測」ボタンは出せる（`AppTransaction` の environment が production にならないため。設定のバージョンを 5 回タップする）。計測は実際の速さに近い Release で行う（2026-11-23、iPhone 13）
 - 社用の Mac は負荷が高すぎて、Mac の計測に使えない（2026-11-23 は load average 5〜8 で解放が 11/11 の 3.5 倍遅く、11/24 は 400 を越えていた）。空いている Mac は無いので、AskHub の司令塔が動いている Mac mini（`ssh macmini`、画面にログインしたまま）で測る。再起動を頼み、負荷が 3 未満に落ちるのを待つ（再起動の直後は写真の解析などで 20〜30 になり、15 分ほどで落ち着いた）。AskHub は止めなくても測れた（2026-11-24）
 - 別の Mac で測るときは、この Mac で Release をアドホック署名でビルドし（CLAUDE.md の macOS のテストと同じ署名の引数で、`ENABLE_APP_SANDBOX` は上書きしない）、`tar czf - UncleRAM.app | ssh <host> 'tar xzf -'` で送って `open -n <app> --args -bench 100` で起動する。scp や tar で送ったものは quarantine が付かないので、そのまま起動できる。スリープは `caffeinate -dimsu -t <秒>` で止め、裏の音は `afplay` で流して、終わりにプロセスが残っているかで確かめる（2026-11-24）
 - 解放が遅いとき、アプリのせいか Mac のせいかを切り分けるには、アプリの外で同じやり方（16MB ずつ mmap し、ページごとに 16 バイトの乱数を書いて、munmap の時間だけを量る。Swift で 30 行ほど、`swiftc -O`）の小さなプログラムを、計測の前後に流す。Mac mini では 1GB あたり 8〜14ms、アプリの中の munmap は 23ms だった（2026-11-24）
