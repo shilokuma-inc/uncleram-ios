@@ -32,3 +32,33 @@ enum BenchAccess {
         isLaunchedForBench || (isSwitchable && isEnabled)
     }
 }
+
+/// 続けてのタップを数える。間が `maxInterval` より空いたら、1 回目から数え直す
+struct RepeatedTapCounter {
+    let requiredTaps: Int
+    let maxInterval: TimeInterval
+    /// 今、続けて何回タップしたか
+    private(set) var taps = 0
+    private var lastTap: Date?
+
+    init(requiredTaps: Int = BenchAccess.requiredTaps, maxInterval: TimeInterval = BenchAccess.maxTapInterval) {
+        self.requiredTaps = requiredTaps
+        self.maxInterval = maxInterval
+    }
+
+    /// タップを 1 回数える。続けて `requiredTaps` 回に届いたら true を返し、数え直す
+    mutating func register(at date: Date = .now) -> Bool {
+        if let lastTap, date.timeIntervalSince(lastTap) <= maxInterval {
+            taps += 1
+        } else {
+            taps = 1
+        }
+        lastTap = date
+        guard taps >= requiredTaps else {
+            return false
+        }
+        taps = 0
+        lastTap = nil
+        return true
+    }
+}
