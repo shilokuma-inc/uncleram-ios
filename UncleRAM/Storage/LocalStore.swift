@@ -12,6 +12,7 @@ final class LocalStore {
         static let seenTutorialBubbles = "seenTutorialBubbles"
         static let reducesCollectEffect = "reducesCollectEffect"
         static let hidesDeviceModelInShare = "hidesDeviceModelInShare"
+        static let showsBenchButton = "showsBenchButton"
         static let dailyRecord = "dailyRecord.v1"
         static let all = [
             hasAcknowledgedSafetyNotice,
@@ -20,6 +21,7 @@ final class LocalStore {
             seenTutorialBubbles,
             reducesCollectEffect,
             hidesDeviceModelInShare,
+            showsBenchButton,
             dailyRecord
         ]
     }
@@ -64,6 +66,12 @@ final class LocalStore {
         didSet { defaults.set(hidesDeviceModelInShare, forKey: Key.hidesDeviceModelInShare) }
     }
 
+    /// 画面の「計測」ボタンを出すか。設定のバージョン表記を続けて 5 回タップすると切り替わる。
+    /// Debug ビルドと App Store 以外の配布でだけ効く（`BenchAccess`）
+    var showsBenchButton: Bool {
+        didSet { defaults.set(showsBenchButton, forKey: Key.showsBenchButton) }
+    }
+
     /// 一度見せた吹き出し（`TutorialBubble` の rawValue）。設定「使い方をもう一度見る」で空にする
     var seenTutorialBubbles: Set<String> {
         didSet { defaults.set(seenTutorialBubbles.sorted(), forKey: Key.seenTutorialBubbles) }
@@ -78,6 +86,7 @@ final class LocalStore {
         hasCompletedFirstRound = defaults.bool(forKey: Key.hasCompletedFirstRound)
         seenTutorialBubbles = Set(defaults.stringArray(forKey: Key.seenTutorialBubbles) ?? [])
         hidesDeviceModelInShare = defaults.bool(forKey: Key.hidesDeviceModelInShare)
+        showsBenchButton = defaults.bool(forKey: Key.showsBenchButton)
     }
 
     /// 設定「データの初期化」。端末の中の記録と設定をすべて消す（2026-11-26 にユーザーが決定）。
@@ -94,5 +103,6 @@ final class LocalStore {
         hasCompletedFirstRound = false
         seenTutorialBubbles = []
         hidesDeviceModelInShare = false
+        showsBenchButton = false
     }
 }

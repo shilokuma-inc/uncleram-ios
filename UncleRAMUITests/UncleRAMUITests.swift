@@ -18,11 +18,13 @@ final class UncleRAMUITests: XCTestCase {
     private func launch(
         acknowledgedSafetyNotice: Bool = true,
         tapToDonate: Bool = false,
-        completedFirstRound: Bool? = nil
+        completedFirstRound: Bool? = nil,
+        showsBenchButton: Bool = false
     ) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += ["-hasAcknowledgedSafetyNotice", acknowledgedSafetyNotice ? "YES" : "NO"]
         app.launchArguments += ["-tapToDonate", tapToDonate ? "YES" : "NO"]
+        app.launchArguments += ["-showsBenchButton", showsBenchButton ? "YES" : "NO"]
         // Game Center のサインインの画面が出ると流れが止まるので、UI テストでは始めない
         app.launchArguments += ["-disableGameCenter", "YES"]
         if let completedFirstRound {
@@ -55,18 +57,20 @@ final class UncleRAMUITests: XCTestCase {
         XCTAssertTrue(app.buttons["献上をはじめる"].isHittable)
     }
 
-    /// 起動するとタイトルが出て、「献上をはじめる」で速達便のラウンド画面（長押しのボタン）に入る
+    /// 起動するとタイトルが出て、「献上をはじめる」で速達便のラウンド画面（長押しのボタン）に入る。
+    /// 開発用の「計測」ボタンは、既定では出さない（#51）
     @MainActor
     func testTitleStartsExpressRound() throws {
         let app = launch()
 
         openRound(app)
+        XCTAssertFalse(app.buttons["計測"].exists)
     }
 
     /// 右上の「計測」を押すと、計測のメニューが開く（紙の画像などの飾りがタップを吸い取らないこと）
     @MainActor
     func testBenchMenuOpens() throws {
-        let app = launch()
+        let app = launch(showsBenchButton: true)
         openRound(app)
 
         let bench = app.buttons["計測"]
@@ -172,6 +176,32 @@ final class UncleRAMUITests: XCTestCase {
         XCTAssertTrue(app.switches.firstMatch.waitForExistence(timeout: 5))
         app.buttons["閉じる"].tap()
         XCTAssertTrue(app.buttons["献上をはじめる"].waitForExistence(timeout: 5))
+    }
+
+    /// 設定のバージョン表記を続けて 5 回タップすると、ラウンドの画面に「計測」ボタンが出る（#51。Debug ビルドなので切り替えられる）
+    @MainActor
+    func testVersionTapsShowBenchButton() throws {
+        let app = launch()
+
+        let settings = app.buttons["設定"]
+        XCTAssertTrue(settings.waitForExistence(timeout: 5))
+        settings.tap()
+        let version = app.staticTexts["settingsVersion"]
+        XCTAssertTrue(version.waitForExistence(timeout: 5))
+        // 1 回ずつ tap() すると、負荷の高い CI ではタップの間が 2 秒を越えて数え直しになることがあるので、5 回を 1 つの操作で送る
+        // （複数回のタップを 1 つで送る API は iOS にしか無い。Mac の UI テストはビルドだけで、流していない）
+        #if os(iOS)
+        version.tap(withNumberOfTaps: 5, numberOfTouches: 1)
+        #else
+        for _ in 0..<5 {
+            version.click()
+        }
+        #endif
+        XCTAssertTrue(app.staticTexts["計測ボタンを出しました"].waitForExistence(timeout: 5))
+        app.buttons["閉じる"].tap()
+
+        openRound(app)
+        XCTAssertTrue(app.buttons["計測"].waitForExistence(timeout: 5))
     }
 
     /// 回収されたら、結果の前に回収演出が出る。演出の終わりに出る「結果を見る」で、結果（ラインを明かす画面）に進む。

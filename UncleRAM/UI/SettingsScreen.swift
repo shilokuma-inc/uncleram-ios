@@ -13,10 +13,21 @@ struct SettingsScreen: View {
     @State private var confirmsReset = false
     /// 「使い方をもう一度見る」を押したあとに出す一言
     @State private var restoredTutorial = false
+    /// 「計測」ボタンの表示を切り替えられる環境か（`BenchAccess`）。App Store 版では false のままで、バージョン表記をタップしても何も起きない
+    @State private var isBenchSwitchable = false
+    /// バージョン表記の、続けてのタップ
+    @State private var versionTaps = RepeatedTapCounter()
+    /// 「計測」ボタンの表示を切り替えたときに、バージョン表記の下に少しの間だけ出す一言
+    @State private var benchNotice: BenchNotice?
 
     enum Page {
         case memoryUsage
         case licenses
+    }
+
+    private enum BenchNotice {
+        case shown
+        case hidden
     }
 
     var body: some View {
@@ -49,6 +60,9 @@ struct SettingsScreen: View {
             Button("やめる", role: .cancel) {}
         } message: {
             Text("初回の案内・設定など、この端末の中の記録をすべて消します。Game Center に送った記録は消えません。")
+        }
+        .task {
+            isBenchSwitchable = await BenchAccess.isSwitchable()
         }
     }
 
@@ -142,11 +156,41 @@ struct SettingsScreen: View {
                 }
                 .buttonStyle(.plain)
             }
+            versionFooter
+        }
+    }
+
+    /// 版とビルド番号。Debug ビルドと TestFlight では、続けて 5 回タップすると「計測」ボタンの表示を切り替える（#51）
+    private var versionFooter: some View {
+        VStack(spacing: 4) {
             Text(verbatim: "Uncle RAM \(Self.version)")
                 .scaledFont(.typewriter(11))
                 .foregroundStyle(Theme.subText)
-                .frame(maxWidth: .infinity)
+                .onTapGesture(perform: registerVersionTap)
+                .accessibilityIdentifier("settingsVersion")
+            if let benchNotice {
+                Text(benchNotice == .shown ? "計測ボタンを出しました" : "計測ボタンを隠しました")
+                    .scaledFont(.mincho(12, .medium))
+                    .foregroundStyle(Theme.subText)
+                    .transition(.opacity)
+            }
         }
+        .frame(maxWidth: .infinity)
+        .task(id: benchNotice) {
+            guard benchNotice != nil, (try? await Task.sleep(for: .seconds(2.5))) != nil else {
+                return
+            }
+            withAnimation { benchNotice = nil }
+        }
+    }
+
+    /// バージョン表記のタップ。切り替えられる環境で、続けて 5 回タップしたら「計測」ボタンの表示を切り替える
+    private func registerVersionTap() {
+        guard isBenchSwitchable, versionTaps.register() else {
+            return
+        }
+        store.showsBenchButton.toggle()
+        withAnimation { benchNotice = store.showsBenchButton ? .shown : .hidden }
     }
 
     private var tapDescription: LocalizedStringKey {
