@@ -1,7 +1,6 @@
 import Foundation
 import Observation
 import os
-import StoreKit
 #if os(iOS)
 import UIKit
 #endif
@@ -16,7 +15,7 @@ import UIKit
 /// - 本番の書き込み方（sparse）で、書いた分が使用量に計上されるか（使用量 ÷ 献上量が 1 に近いか）
 ///
 /// 起動引数 `-bench <ラウンド数>`（と `-bench-fill full|sparse`。既定は本番と同じ sparse）で、起動してすぐに始める。
-/// 画面の「計測」ボタンは、Debug ビルドと TestFlight（App Store 以外）のときだけ出す。
+/// 画面の「計測」ボタンは既定で隠す。Debug ビルドと TestFlight（App Store 以外）では、設定のバージョン表記を続けて 5 回タップすると出せる（`BenchAccess`）。
 @MainActor
 @Observable
 final class BenchRunner {
@@ -75,8 +74,10 @@ final class BenchRunner {
     private(set) var plannedRounds = 0
     private(set) var summary: Summary?
     private(set) var savedURL: URL?
-    /// 計測のボタンを出すか（Debug ビルドと、App Store 以外の配布）
+    /// 計測のボタンを切り替えられる環境か（Debug ビルドと、App Store 以外の配布）。出すかどうかは `showsButton(isEnabled:)`
     private(set) var isAvailable = false
+    /// 起動引数で計測したか。そのときは、設定に関係なくボタンを出す
+    private(set) var isLaunchedForBench = false
 
     @ObservationIgnored private let engine: RoundEngine
     @ObservationIgnored private let frameMonitor = FrameMonitor()
@@ -89,10 +90,16 @@ final class BenchRunner {
         isAvailable = true
         #else
         Task { [weak self] in
-            let environment = try? await AppTransaction.shared.payloadValue.environment
-            self?.isAvailable = environment != nil && environment != .production
+            let isSwitchable = await BenchAccess.isSwitchable()
+            self?.isAvailable = isSwitchable
         }
         #endif
+    }
+
+    /// 画面に「計測」ボタンを出すか
+    /// - Parameter isEnabled: 端末に記録した設定（`LocalStore.showsBenchButton`）
+    func showsButton(isEnabled: Bool) -> Bool {
+        BenchAccess.showsButton(isSwitchable: isAvailable, isEnabled: isEnabled, isLaunchedForBench: isLaunchedForBench)
     }
 
     /// 起動引数で頼まれていれば始める
@@ -113,6 +120,7 @@ final class BenchRunner {
             fillMode = mode
         }
         isAvailable = true
+        isLaunchedForBench = true
         start(rounds: rounds, fillMode: fillMode)
     }
 

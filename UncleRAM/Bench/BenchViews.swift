@@ -1,11 +1,13 @@
 import SwiftUI
 
-/// 計測を始めるボタン（Debug ビルドと TestFlight のときだけ出す）
+/// 計測を始めるボタン。既定は隠し、Debug ビルドと TestFlight で、設定のバージョン表記を続けて 5 回タップしたときだけ出す（`BenchAccess`）
 struct BenchButton: View {
     let bench: BenchRunner
+    /// 撮影モードやプレビューなど、AppRoot の外では無い（そのときは出さない）
+    @Environment(LocalStore.self) private var store: LocalStore?
 
     var body: some View {
-        if bench.isAvailable, !bench.isRunning {
+        if bench.showsButton(isEnabled: store?.showsBenchButton ?? false), !bench.isRunning {
             Menu {
                 Button("100 ラウンド（全体を乱数で埋める）") {
                     bench.start(rounds: 100, fillMode: .full)
