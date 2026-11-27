@@ -46,7 +46,9 @@ struct BenchRunnerTests {
         #expect(shows == expected)
     }
 
-    /// Debug ビルドでも、設定がオフ（既定）なら「計測」ボタンを出さない（TestFlight と同じ見え方にする）
+    #if DEBUG
+    /// Debug ビルドでも、設定がオフ（既定）なら「計測」ボタンを出さない（TestFlight と同じ見え方にする）。
+    /// Release では切り替えられるかを `AppTransaction` から非同期に決めるので、Debug だけで確かめる
     @Test
     func benchButtonIsHiddenByDefaultInDebug() {
         let bench = BenchRunner(engine: RoundEngine())
@@ -55,6 +57,7 @@ struct BenchRunnerTests {
         #expect(!bench.showsButton(isEnabled: false))
         #expect(bench.showsButton(isEnabled: true))
     }
+    #endif
 
     /// 間を空けずに 5 回タップすると切り替わり、数え直す
     @Test
